@@ -1,0 +1,2004 @@
+<!doctype html>
+<html lang="ko" data-ink="black">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>냉장고 문 시퀀스: 새는 빛</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500&display=swap">
+<style>
+  :root{ --ground:#ffffff; --mark:#000000; --quiet:#666666; }
+  :root[data-ink="white"]{ --ground:#000000; --mark:#ffffff; --quiet:#a0a0a0; }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{
+    background:var(--ground); color:var(--mark); overflow:hidden;
+    font-family:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    font-size:14px; line-height:1.4;
+  }
+  #field{ position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; cursor:ew-resize; }
+
+  #panel{
+    position:fixed; left:10px; right:10px; bottom:max(10px, env(safe-area-inset-bottom));
+    max-width:640px; margin:0 auto; padding:10px 12px 12px; color:#e9e9e9; font-size:13px;
+    background:rgba(8,8,10,.78); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
+    border:1px solid rgba(255,255,255,.22); display:grid; gap:9px;
+    transition:transform .25s ease, opacity .25s ease;
+  }
+  #panel.folded{ transform:translateY(calc(100% + 20px)); opacity:0; pointer-events:none; }
+  #pill{
+    position:fixed; left:50%; bottom:max(12px, env(safe-area-inset-bottom)); transform:translateX(-50%);
+    display:none; align-items:center; gap:10px; padding:7px 14px; min-height:36px;
+    background:rgba(8,8,10,.72); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,.25); color:#fff; font:inherit; font-size:13px; cursor:pointer;
+  }
+  body.folded #pill{ display:flex; }
+  #pill b{ font-weight:500; }
+  #pill span{ color:rgba(255,255,255,.6); font-variant-numeric:tabular-nums; }
+
+  .top{ display:flex; align-items:center; gap:10px; }
+  .top output{ flex:0 0 3.4em; font-size:20px; font-weight:500; color:#fff; font-variant-numeric:tabular-nums; text-align:right; }
+  .icon{ flex:0 0 38px; min-width:38px; height:38px; padding:0; font-size:15px; display:grid; place-items:center; }
+
+  input[type=range]{
+    -webkit-appearance:none; appearance:none; flex:1 1 auto; min-width:0;
+    height:38px; margin:0; background:transparent; cursor:pointer; touch-action:none;
+  }
+  input[type=range]::-webkit-slider-runnable-track{ height:2px; background:linear-gradient(90deg, rgba(255,255,255,.9) var(--p,0%), rgba(255,255,255,.25) var(--p,0%)); }
+  input[type=range]::-moz-range-track{ height:2px; background:rgba(255,255,255,.25); }
+  input[type=range]::-moz-range-progress{ height:2px; background:rgba(255,255,255,.9); }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:18px; height:18px; margin-top:-8px; border:0; border-radius:50%;
+    background:#fff; box-shadow:0 0 12px rgba(255,255,255,.8);
+  }
+  input[type=range]::-moz-range-thumb{ width:18px; height:18px; border:0; border-radius:50%; background:#fff; box-shadow:0 0 12px rgba(255,255,255,.8); }
+
+  .row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .seg{ display:flex; }
+  .seg button + button{ border-left-width:0; }
+  .spacer{ flex:1 1 auto; }
+  .chips{ display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; margin:0 -12px; padding:0 12px; scroll-snap-type:x proximity; }
+  .chips::-webkit-scrollbar{ display:none; }
+  .chips button{ flex:0 0 auto; scroll-snap-align:start; display:flex; align-items:baseline; gap:6px; }
+  .chips button i{ font-style:normal; opacity:.55; font-size:11px; }
+  .label{ color:rgba(255,255,255,.45); font-size:12px; margin-right:2px; }
+  .hint{ color:rgba(255,255,255,.38); font-size:11px; }
+  @media (hover:none){ .hint{ display:none; } }
+
+  button{
+    font:inherit; color:#e9e9e9; background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.22); border-radius:0;
+    padding:6px 11px; min-height:34px; cursor:pointer; white-space:nowrap;
+  }
+  button:hover{ border-color:rgba(255,255,255,.6); }
+  button[aria-pressed="true"]{ background:#f4f4f4; color:#000; border-color:#f4f4f4; }
+  button:focus-visible, input[type=range]:focus-visible{ outline:1px solid #fff; outline-offset:3px; }
+  #backBtn{
+    position:fixed; z-index:4; left:max(10px, env(safe-area-inset-left)); top:max(10px, env(safe-area-inset-top));
+    background:rgba(8,8,10,.72); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,.28); color:#fff; font-size:13px; padding:6px 12px 6px 10px; min-height:36px;
+  }
+  #backBtn:hover{ border-color:rgba(255,255,255,.7); }
+  body.grid #backBtn{ display:none; }
+  #sndStat{ color:rgba(255,255,255,.55); font-size:12px; font-variant-numeric:tabular-nums; }
+  #dropHint{
+    position:fixed; inset:12px; z-index:5; display:grid; place-items:center; pointer-events:none;
+    border:1px dashed rgba(255,255,255,.7); background:rgba(0,0,0,.45); color:#fff; font-size:15px;
+  }
+  [hidden]{ display:none !important; }
+</style>
+</head>
+<body>
+<button id="backBtn" type="button" aria-label="전체 보기로 돌아가기" title="전체 보기 (Esc)">← 전체 보기</button>
+<canvas id="field" aria-label="냉장고 문이 닫힐수록 좁아지고 격해지는 빛을 기호로 그린 화면. 좌우로 끌면 문이 움직입니다."></canvas>
+
+<section id="panel" aria-label="조절 패널">
+  <div class="top">
+    <button id="auto" class="icon" type="button" aria-pressed="true" aria-label="자동으로 여닫기" title="자동 재생 (Space)">❚❚</button>
+    <input id="deg" type="range" min="0" max="110" step="0.1" value="0" aria-label="문 각도">
+    <output id="degOut" for="deg">0°</output>
+    <button id="fold" class="icon" type="button" aria-label="패널 숨기기" title="패널 숨기기 (H · 화면 두 번 탭)">▾</button>
+  </div>
+  <div class="row">
+    <div class="seg" role="group" aria-label="빠른 각도">
+      <button type="button" data-goto="0">닫힘</button>
+      <button type="button" data-goto="12">틈</button>
+      <button type="button" data-goto="55">반</button>
+      <button type="button" data-goto="110">활짝</button>
+    </div>
+    <button id="gridBtn" type="button" aria-pressed="false" title="3×3 미리보기 (G)">그리드</button>
+    <button id="qBtn" type="button" title="그리는 해상도 (Q)">화질 자동</button>
+    <button id="senBtn" type="button" aria-pressed="false" title="카메라 밝기로 문 판정">센서</button>
+    <button id="calBtn" type="button" style="display:none" title="지금을 닫힘으로 기준 삼기">닫힘 보정</button>
+    <button id="calOBtn" type="button" style="display:none" title="지금을 활짝 열린 상태로 기준 삼기">열림 보정</button>
+    <span class="spacer"></span>
+    <span id="inkGroup" class="seg" role="group" aria-label="바탕">
+      <button type="button" data-ink="black" aria-pressed="true">흰 바탕</button>
+      <button type="button" data-ink="white" aria-pressed="false">검은 바탕</button>
+    </span>
+    <div class="seg" role="group" aria-label="화면" id="viewSeg">
+      <button type="button" data-view="fridge" aria-pressed="true">냉장고</button>
+      <button type="button" data-view="abstract" aria-pressed="false">추상</button>
+    </div>
+  </div>
+  <div class="chips" role="group" aria-label="디자인 타입">
+    <button type="button" data-type="A" aria-pressed="true"><i>A</i>흑백 물결</button>
+    <button type="button" data-type="B" aria-pressed="false"><i>B</i>잉크 선</button>
+    <button type="button" data-type="C" aria-pressed="false"><i>C</i>열화상</button>
+    <button type="button" data-type="D" aria-pressed="false"><i>D</i>성운</button>
+    <button type="button" data-type="E" aria-pressed="false"><i>E</i>필름</button>
+    <button type="button" data-type="F" aria-pressed="false"><i>F</i>픽셀 소팅</button>
+    <button type="button" data-type="G" aria-pressed="false"><i>G</i>액체 크롬</button>
+    <button type="button" data-type="H" aria-pressed="false"><i>H</i>서툰 모델링</button>
+  </div>
+  <div class="row" role="group" aria-label="소리">
+    <button id="sndBtn" type="button" aria-pressed="false" title="소리 켜기 (M)">소리</button>
+    <button id="sndAdd" type="button" title="노래 파일 넣기 (이름이 1–9 또는 A–H로 시작하면 그 칸으로)">노래 넣기</button>
+    <button id="testBtn" type="button" title="칸마다 컨셉에 맞춘 시험용 루프를 넣습니다">시험용 루프</button>
+    <input id="sndFile" type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.flac" multiple hidden>
+    <span class="spacer"></span>
+    <span id="sndStat">노래 0/9</span>
+  </div>
+  <div class="row hint">←→ 각도 · Space 재생 · 1–8 타입 · G 그리드 · Esc 전체 보기 · M 소리 · Q 화질 · V 화면 · H 숨김 · 파일을 칸에 끌어다 놓기</div>
+</section>
+<div id="dropHint" hidden>여기에 놓으면 노래가 들어갑니다</div>
+<button id="pill" type="button" aria-label="조절 패널 펴기"><b id="pillType">A 흑백 물결</b><span id="pillDeg">0°</span>▴</button></section>
+
+<script>
+(() => {
+  let cv = document.getElementById('field'), ctx = cv.getContext('2d');
+  const mainCv = cv, mainCtx = ctx;
+  const src = document.createElement('canvas'), sctx = src.getContext('2d');
+  const small = document.createElement('canvas'), smctx = small.getContext('2d', { willReadFrequently: true });
+  const GLOW = [0, 1, 2, 3].map(() => { const c = document.createElement('canvas'); return { c, x: c.getContext('2d') }; });
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const state = { deg: 0, auto: !reduce, mode: 'seq', view: 'fridge', type: 'A', grid: false };
+
+  const CLOSED = 5;                 // 이 각도 아래는 '닫힘' (후하게)
+  let sndUiTick = 0;
+  let rs = 1, rsIdx = 5, ftEMA = 16, qMode = 'auto', qTick = 0, dirty = 2, lastSig = '';
+  const RS = [0.44, 0.52, 0.62, 0.74, 0.86, 1];
+  let W = 0, H = 0, dpr = 1, s = 24, cols = 0, rows = 0, offX = 0, offY = 0, scale = 1;
+  let dens = null;
+  let last = performance.now(), clock = 0, ph = 0, live = 0, wasOpen = false;
+  let offT = -1, offEnd = 1, darkGround = false;   // offT: 점들이 꺼지는 중의 경과 시간 (음수면 아님)
+  let ink = '#fff', ground = '#000', inkMode = 'black';
+  let sweep = 0, swX = 0, swY = 0, kc = 0, vivP = 0, glowAmt = 0, glowTint = null, cellZ = 1, volGl = 0;   // cellZ: 이 칸이 카메라에 얼마나 가까운가 (원근)
+  const IMG = document.createElement('canvas'), ictx = IMG.getContext('2d');
+  const UP = document.createElement('canvas'), uctx = UP.getContext('2d');
+  let imgData = null, grainTiles = null, grainIdx = 0, grainTick = 0, FRES = null, FIELD = null, BURN = null;
+  const CH = [0, 1, 2].map(() => { const c = document.createElement('canvas'); return { c, x: c.getContext('2d') }; });
+  const MOTES = [];                                   // 빛 속을 떠도는 먼지: 원근과 공간감을 만든다
+  let volState = null, curA = 0;                                // 이번 프레임의 빛 부피 (틈의 각도 등)
+  const RMAX = 0.46;   // 점은 서로 닿을 뿐 뭉개지지 않는다: 끝까지 LED 격자로 남는다
+  // 반시계로 도는 네온 띠: 빨강 → 자홍 → 파랑 → 청록 → 초록 → (노랑) → 빨강. 색마다 고원이 있고 그 사이는 부드럽게 넘어간다
+  const NCOL = 64, IDX_CLOSED = 64, IDX_WHITE = 65, PAL = new Array(130), HOT = 66;
+  PAL[IDX_CLOSED] = '#d2d2d2'; PAL[IDX_WHITE] = '#ffffff';
+  const lineB = new Map(), dotB = new Map(), rectB = new Map();
+
+  // 냉장고 화면의 카메라: 정면, 약간 위에서 내려다보는 광각
+  const cam = { x: -0.75, y: 1.35, z: 2.3 }, PITCH = 0.1, cp = Math.cos(PITCH), sp = Math.sin(PITCH);
+  const BW = 1, BH = 1.9, BD = 0.9, WALLZ = -1.25, LAMPZ = -0.34, LAMPS = [-0.18, 0, 0.18];
+  let F = 500, cx = 0, cy = 0;
+
+
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const sstep = (a, b, x) => { const k = clamp((x - a) / (b - a), 0, 1); return k * k * (3 - 2 * k); };
+  const hash = (i, j) => { let n = (i | 0) * 374761393 + (j | 0) * 668265263; n = (n ^ (n >>> 13)) * 1274126177; return ((n ^ (n >>> 16)) >>> 0) / 4294967296; };
+
+  function readTheme() {
+    const cs = getComputedStyle(document.documentElement);
+    ink = cs.getPropertyValue('--mark').trim() || '#fff';
+    ground = cs.getPropertyValue('--ground').trim() || '#000';
+    inkMode = document.documentElement.getAttribute('data-ink') || 'black';
+  }
+
+  // 열린 틈을 중심으로 반시계로 도는 색. 활짝 열리면 검정 근처의 스펙트럼, 닫힐수록 쨍한 단색 조각
+  function cellColor(x, y) {
+    if (live < 0.5) return IDX_CLOSED;
+    let tr;
+    if (state.type === 'A') {                        // 흑백: 틈에서 퍼지는 동심원과 도는 부챗살이 겹쳐 물결이 된다
+      const dd = Math.hypot(x - swX, y - swY) / scale, aa = Math.atan2(y - swY, x - swX);
+      tr = 0.5 + 0.22 * (fbm(dd * 2.2 - ph * 0.02, aa * 0.8 - sweep * 0.3) - 0.5) + 0.1 * Math.cos(aa - sweep);   // 동심원 대신 느린 얼룩: 물결이 아니라 빛의 번짐
+    } else {
+      tr = (Math.atan2(y - swY, x - swX) - sweep) / (2 * Math.PI) + 0.3 * Math.hypot(x - swX, y - swY) / scale;
+      tr -= Math.floor(tr);
+    }
+    return clamp(Math.floor(tr * NCOL), 0, NCOL - 1);
+  }
+  // A: 순수한 흑백. 물결의 마루와 골이 밝기 차이로만 나타나고, 닫힐수록 대비가 벌어진다
+  function buildPaletteA(dark, c) {
+    const lo = dark ? 20 : 238, hi = dark ? 255 : 0;
+    for (let n = 0; n < NCOL; n++) {
+      const g = Math.round(lo + (hi - lo) * clamp(0.5 + (0.45 + 0.55 * c) * (n / (NCOL - 1) - 0.5) * 2, 0, 1));
+      PAL[n] = 'rgb(' + g + ',' + g + ',' + g + ')';
+      const wg = dark ? 255 : Math.round(g * 0.2);
+      PAL[HOT + n] = 'rgb(' + wg + ',' + wg + ',' + wg + ')';
+    }
+    PAL[IDX_CLOSED] = dark ? '#d2d2d2' : '#161616'; PAL[IDX_WHITE] = dark ? '#ffffff' : '#000000';
+  }
+  // B: 형광 분홍과 파랑, 두 가지 잉크. 활짝 열렸을 땐 먹색에 가깝다가 닫힐수록 형광으로 뜬다
+  function buildPaletteB(v) {
+    const INK = [[255, 72, 176], [104, 60, 190], [0, 120, 215], [104, 60, 190]], D0 = [24, 22, 30];
+    for (let n = 0; n < NCOL; n++) {
+      const t = n / NCOL * 4, m = Math.floor(t) % 4, f = sstep(0, 1, t - Math.floor(t)), P = INK[m], Q = INK[(m + 1) % 4];
+      let c = ''; for (let q = 0; q < 3; q++) { const neon = P[q] + (Q[q] - P[q]) * f; c += (q ? ',' : '') + Math.round(D0[q] + (neon - D0[q]) * v); }
+      PAL[n] = PAL[HOT + n] = 'rgb(' + c + ')';
+    }
+    PAL[IDX_CLOSED] = '#1b1a1f'; PAL[IDX_WHITE] = '#1b1a1f';
+  }
+  // C: 열화상. 색은 방향이 아니라 온도다
+  const IRON = [[0, 8, 5, 16], [0.18, 30, 12, 96], [0.4, 128, 16, 170], [0.6, 228, 38, 104], [0.76, 255, 124, 24], [0.9, 255, 218, 60], [1, 255, 255, 255]];
+  function buildPaletteC() {
+    for (let n = 0; n < NCOL; n++) {
+      const t = n / (NCOL - 1); let m = 0; while (m < IRON.length - 2 && t >= IRON[m + 1][0]) m++;
+      const P = IRON[m], Q = IRON[m + 1], f = clamp((t - P[0]) / (Q[0] - P[0]), 0, 1);
+      PAL[n] = PAL[HOT + n] = 'rgb(' + Math.round(P[1] + (Q[1] - P[1]) * f) + ',' + Math.round(P[2] + (Q[2] - P[2]) * f) + ',' + Math.round(P[3] + (Q[3] - P[3]) * f) + ')';
+    }
+    PAL[IDX_CLOSED] = '#7a72b4'; PAL[IDX_WHITE] = '#ffffff';
+  }
+  function seg(ci, lw, x1, y1, x2, y2) {
+    const key = ci * 256 + Math.max(2, Math.min(255, Math.round(lw * 4)));
+    let a = lineB.get(key); if (!a) { a = []; lineB.set(key, a); }
+    a.push(x1, y1, x2, y2);
+  }
+  function dot(ci, x, y, r) {
+    if (r < 0.25) return;
+    let a = dotB.get(ci); if (!a) { a = []; dotB.set(ci, a); }
+    a.push(x, y, r);
+  }
+  function rect(ci, x, y, side) {
+    if (side < 0.5) return;
+    let a = rectB.get(ci); if (!a) { a = []; rectB.set(ci, a); }
+    a.push(x - side / 2, y - side / 2, side);
+  }
+  function flush() {
+    if ('DEFG'.includes(state.type)) { flushImage(); if (state.type === 'D') ctx.globalCompositeOperation = 'lighter'; }
+    for (const [ci, a] of rectB) {
+      if (!a.length) continue;
+      ctx.fillStyle = PAL[ci]; ctx.beginPath();
+      for (let n = 0; n < a.length; n += 3) ctx.rect(a[n], a[n + 1], a[n + 2], a[n + 2]);
+      ctx.fill(); a.length = 0;
+    }
+    for (const [ci, a] of dotB) {
+      if (!a.length) continue;
+      ctx.fillStyle = PAL[ci]; ctx.beginPath();
+      for (let n = 0; n < a.length; n += 3) { ctx.moveTo(a[n] + a[n + 2], a[n + 1]); ctx.arc(a[n], a[n + 1], a[n + 2], 0, 6.2832); }
+      ctx.fill(); a.length = 0;
+    }
+    ctx.lineCap = state.type === 'B' ? 'butt' : 'round';
+    for (const [key, a] of lineB) {
+      if (!a.length) continue;
+      ctx.strokeStyle = PAL[key >> 8]; ctx.lineWidth = (key & 255) / 4; ctx.beginPath();
+      for (let n = 0; n < a.length; n += 4) { ctx.moveTo(a[n], a[n + 1]); ctx.lineTo(a[n + 2], a[n + 3]); }
+      ctx.stroke(); a.length = 0;
+    }
+  }
+
+  function layout() {
+    W = innerWidth; H = innerHeight; scale = Math.min(W, H);
+    dpr = clamp(Math.min(devicePixelRatio || 1, 1.75) * rs, 0.5, 2);
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    s = state.view === 'abstract' ? clamp(Math.max(W, H) / 100, 8, 19) : clamp(W / 88, 8, 18);
+    if (state.type === 'D') s *= 0.95;
+    if (state.type === 'E') s *= 0.62;
+    if (state.type === 'F') s *= 0.5;                        // 픽셀 소팅: 가는 기둥들
+    if (state.type === 'G') s *= 0.6;                       // 필름은 연속 톤: 촘촘히 샘플링한다                       // 물방울은 이웃과 닿을 만큼 크게
+    if (state.type === 'B') s *= 0.86;                       // 선 스크린은 촘촘하게
+    if (state.type === 'C') s *= 1.3;                        // 픽셀은 큼직하게
+    cols = Math.floor(W / s) + 2; rows = Math.floor(H / s) + 2;
+    offX = (W - (cols - 1) * s) / 2; offY = (H - (rows - 1) * s) / 2;
+    F = Math.min(W * 1.1, H * 1.15); cx = W * 0.5 - F * 0.11; cy = H * 0.45 - F * 0.27;
+    src.width = cols * 3; src.height = rows * 3; small.width = cols; small.height = rows;
+    dens = new Float32Array(cols * rows);
+    IMG.width = cols; IMG.height = rows; imgData = ictx.createImageData(cols, rows);
+    FRES = new Float32Array(cols * rows); BURN = new Float32Array(cols * rows); FIELD = new Float32Array(cols * rows * 2);
+    for (let n = 3; n < imgData.data.length; n += 4) imgData.data[n] = 255;
+    UP.width = cols * 4; UP.height = rows * 4;
+  }
+
+  function proj(X, Y, Z) {
+    const rx = X - cam.x, ry = Y - cam.y, rz = Z - cam.z;
+    const yc = ry * cp - rz * sp, zc = -ry * sp - rz * cp;
+    return [cx + F * rx / zc, cy - F * yc / zc];
+  }
+
+  // 바닥의 한 점이 내부 등에서 직접 보이는 비율: 개구부를 지나고 문에 막히지 않아야 한다
+  function litFrac(PX, PZ, dX, dZ) {
+    if (PZ <= 0.02) return 0;
+    let n = 0;
+    const qx = dX - 0.5, qz = dZ;
+    for (let a = 0; a < 3; a++) {
+      const lx = LAMPS[a], rx = PX - lx, rz = PZ - LAMPZ;
+      const xs = lx + rx * (-LAMPZ / rz);
+      if (xs < -0.47 || xs > 0.47) continue;
+      const den = rx * qz - rz * qx;
+      if (Math.abs(den) > 1e-9) {
+        const hx = 0.5 - lx, hz = -LAMPZ;
+        const tt = (hx * qz - hz * qx) / den, uu = (hx * rz - hz * rx) / den;
+        if (tt > 0 && tt < 1 && uu >= 0 && uu <= 1) continue;
+      }
+      n++;
+    }
+    return n / 3;
+  }
+
+  // 냉장고를 '밀도 그림'으로 그린다. 화면에는 이 그림이 아니라 점의 크기만 나타난다.
+  function spoly(pts, v) {
+    const g = Math.round(clamp(v, 0, 1) * 255);
+    sctx.fillStyle = 'rgb(' + g + ',' + g + ',' + g + ')';
+    sctx.beginPath(); sctx.moveTo(pts[0][0], pts[0][1]);
+    for (let n = 1; n < pts.length; n++) sctx.lineTo(pts[n][0], pts[n][1]);
+    sctx.closePath(); sctx.fill();
+  }
+  let densKey = '';
+  function drawDensity(th) {
+    const key = th.toFixed(3) + '|' + live.toFixed(2) + '|' + cols + '|' + rows + '|' + F.toFixed(0);
+    if (key === densKey) return; densKey = key;
+    const q = 3 / s;
+    sctx.setTransform(1, 0, 0, 1, 0, 0);
+    sctx.fillStyle = 'rgb(10,10,10)'; sctx.fillRect(0, 0, src.width, src.height);
+    sctx.setTransform(q, 0, 0, q, 1.5 - offX * q, 1.5 - offY * q);
+    const horizon = proj(0, 0, WALLZ)[1];
+    sctx.fillStyle = 'rgb(26,26,26)'; sctx.fillRect(-s, horizon, W + 2 * s, H);
+    const x0 = -BW / 2, x1 = BW / 2, m = 0.06;
+    spoly([proj(x0, 0, -BD), proj(x0, 0, 0), proj(x0, BH, 0), proj(x0, BH, -BD)], 0.42);
+    spoly([proj(x0, BH, 0), proj(x1, BH, 0), proj(x1, BH, -BD), proj(x0, BH, -BD)], 0.16);
+    spoly([proj(x0, 0, 0), proj(x1, 0, 0), proj(x1, BH, 0), proj(x0, BH, 0)], 0.28);
+    spoly([proj(x0 + m, m, 0), proj(x1 - m, m, 0), proj(x1 - m, BH - m, 0), proj(x0 + m, BH - m, 0)], 0.1 + 1.1 * live);
+    // 선반: 빛을 가리는 '뼈'
+    const ch = (BH - 2 * m) / 4;
+    sctx.strokeStyle = 'rgb(20,20,20)'; sctx.lineWidth = F * 0.012;
+    for (let k = 1; k < 4; k++) { const fy = m + k * ch, a = proj(x0 + m, fy, -0.2), b = proj(x1 - m, fy, -0.2); sctx.beginPath(); sctx.moveTo(a[0], a[1]); sctx.lineTo(b[0], b[1]); sctx.stroke(); }
+    // 도넛 하나. 세워 두지 않고 선반 위에 눕혀 두었다: 위에서 비스듬히 내려다본 타원으로 보인다
+    const dy0 = m + ch, dcx = -0.04, dcz = -0.36, Ro = 0.3, Ri = 0.115, tube = 0.15;
+    const ell = (rad, yy) => { const pts = []; for (let a = 0; a < 36; a++) pts.push(proj(dcx + Math.cos(a / 36 * 6.2832) * rad, yy, dcz + Math.sin(a / 36 * 6.2832) * rad)); return pts; };
+    spoly(ell(Ro * 0.97, dy0 + 0.02), 0.03);                         // 옆면 (그늘진 둘레)
+    spoly(ell(Ro, dy0 + tube * 0.62), 0.09);                         // 윗면
+    spoly(ell(Ro * 0.8, dy0 + tube * 0.82), 0.13);                   // 도톰하게 솟은 등
+    spoly(ell(Ri * 1.25, dy0 + tube * 0.7), 0.06);                   // 구멍 안쪽 벽
+    spoly(ell(Ri, dy0 + tube * 0.45), 0.1 + 1.1 * live);             // 구멍 너머의 선반(빛)
+    sctx.strokeStyle = 'rgb(120,120,120)'; sctx.lineWidth = F * 0.006; sctx.lineCap = 'round';   // 앞쪽 가장자리의 윤기
+    sctx.beginPath(); for (let a = 8; a <= 28; a++) { const pp = proj(dcx + Math.cos(a / 36 * 6.2832) * Ro * 0.9, dy0 + tube * 0.75, dcz + Math.sin(a / 36 * 6.2832) * Ro * 0.9); a === 8 ? sctx.moveTo(pp[0], pp[1]) : sctx.lineTo(pp[0], pp[1]); } sctx.stroke();
+    const fX = 0.5 - Math.cos(th), fZ = Math.sin(th);
+    spoly([proj(0.5, 0, 0), proj(fX, 0, fZ), proj(fX, BH, fZ), proj(0.5, BH, 0)], 0.36);
+    const hx = 0.5 + (fX - 0.5) * 0.86, hz = fZ * 0.86, h0 = proj(hx, 0.7, hz), h1 = proj(hx, 1.25, hz);
+    sctx.strokeStyle = 'rgb(235,235,235)'; sctx.lineWidth = F * 0.014; sctx.lineCap = 'round';
+    sctx.beginPath(); sctx.moveTo(h0[0], h0[1]); sctx.lineTo(h1[0], h1[1]); sctx.stroke();
+
+    smctx.drawImage(src, 0, 0, cols, rows);
+    const d = smctx.getImageData(0, 0, cols, rows).data;
+    for (let k = 0, p = 0; k < dens.length; k++, p += 4) dens[k] = d[p] / 255;
+  }
+
+  // 한 칸을 그린다. Lv: 직접 닿는 빛, Dt: 점면의 밀도(사물 + 번지는 빛)
+  function chevron(ci, lw, tx, ty, ang, hl) {
+    seg(ci, lw, tx - Math.cos(ang - 0.62) * hl, ty - Math.sin(ang - 0.62) * hl, tx, ty);
+    seg(ci, lw, tx - Math.cos(ang + 0.62) * hl, ty - Math.sin(ang + 0.62) * hl, tx, ty);
+  }
+  // 한 칸. 점은 끝까지 둥근 점이고, 방향은 가는 빛줄기로만 말한다
+  // 단계: 0 점 · 1 점+빛줄기 · 2 긴 빛줄기 · 3 화살표 · 4 깃 달린 화살표 · 5 겹화살 · 6 세겹화살
+  function drawCell(x, y, i, j, Lv, ang, A, Dt, throb, Dc) {
+    const T = state.type;
+    if (T === 'D') return drawD(x, y, i, j, Lv, ang, A, Dt, throb, Dc);
+    if (T === 'E') return drawE(x, y, i, j, Lv, ang, A, Dt, throb, Dc);
+    if (T === 'F') return drawF(x, y, i, j, Lv, ang, A, Dt, throb, Dc);
+    if (T === 'G') return drawG(x, y, i, j, Lv, ang, A, Dt, throb, Dc);
+    const s0 = s; s = s * cellZ;                        // 가까운 칸은 기호도 크다
+    (T === 'A' ? drawA : T === 'B' ? drawB : drawC)(x, y, i, j, Lv, ang, A, Dt, throb, Dc);
+    s = s0;
+  }
+
+  // ── D 성운: 천체 사진처럼. 가스는 격자가 아니라 난류의 결을 따르고, 별은 격자를 벗어나 흩뿌려진다
+  // 색은 무지개가 아니라 실제 방출선: 수소(붉은 자홍)와 산소(청록), 그리고 빛을 가리는 검은 먼지띠
+  function vnoise(x, y) {
+    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+    const a = hash(xi, yi), b = hash(xi + 1, yi), c = hash(xi, yi + 1), d = hash(xi + 1, yi + 1);
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  }
+  function fbm(x, y) { return 0.55 * vnoise(x, y) + 0.3 * vnoise(x * 2.1 + 5.3, y * 2.1 - 1.7) + 0.15 * vnoise(x * 4.3 - 2.9, y * 4.3 + 8.1); }
+  const HA = [236, 46, 104], HB = [255, 110, 190], OIII = [40, 176, 196], STARTINT = [[170, 200, 255], [255, 246, 228], [255, 196, 140]];
+  function putPx(i, j, r, g, b) {
+    const n = (j * cols + i) * 4, d = imgData.data;
+    d[n] = r > 255 ? 255 : r; d[n + 1] = g > 255 ? 255 : g; d[n + 2] = b > 255 ? 255 : b;
+  }
+  function drawD(x, y, i, j, Lv, ang, A, Dt, throb, Dc) {
+    const h = hash(i, j), dd = Math.hypot(x - swX, y - swY) / scale, lit = Lv >= 0.06;
+    // 난류: 틈을 중심으로 아주 천천히 반시계로 감기며 바깥으로 흘러나간다
+    const rot = -sweep * 0.25, cr = Math.cos(rot), sr = Math.sin(rot), ux = (x - swX) / scale, uy = (y - swY) / scale;
+    const nx = (ux * cr - uy * sr) * 3.2 - ph * 0.01, ny = (ux * sr + uy * cr) * 3.2;
+    const n1 = fbm(nx, ny), n2 = fbm(nx + 7.7, ny - 3.1), dust = sstep(0.55, 0.78, fbm(nx * 1.6 - 11, ny * 1.6 + 4));
+    let v = (clamp(Dt * 0.85, 0, 1.3) * (0.55 + 0.7 * n1) + (lit ? Lv * 0.55 : 0) * (0.3 + 1.2 * Math.pow(n1, 1.6))) * (1 - 0.65 * dust);   // 사물의 형태는 남기고, 빛은 가스처럼
+    let gain = 70 + 150 * vivP, rest = 0;
+    if (offT >= 0) {
+      const tl = offT - (dd * 0.22 + h * 0.06);
+      if (tl > 0) { const p = clamp(tl / 0.19, 0, 1); v *= 1 - p; rest = clamp((tl - 0.24) / 0.4, 0, 1); }
+    } else if (live < 0.5) rest = 1;
+    const mixO = sstep(0.35, 0.75, n2), mixB = sstep(0.5, 0.9, n1);
+    let R = (HA[0] + (HB[0] - HA[0]) * mixB) * (1 - mixO) + OIII[0] * mixO, G = (HA[1] + (HB[1] - HA[1]) * mixB) * (1 - mixO) + OIII[1] * mixO, B = (HA[2] + (HB[2] - HA[2]) * mixB) * (1 - mixO) + OIII[2] * mixO;
+    const k = v * gain / 255; R *= k; G *= k; B *= k;
+    if (v > 1.15) { const w = (v - 1.15) * 90; R += w; G += w; B += w; }                                   // 가장 짙은 곳만 하얗게 포화
+    if (rest > 0) { const rv = clamp(Dc, 0, 1) * 60 * rest; R = R * (1 - rest) + rv * 0.55; G = G * (1 - rest) + rv * 0.62; B = B * (1 - rest) + rv; }
+    putPx(i, j, R, G, B);
+    if (rest > 0.5) { if (Dc > 0.08 && h < 0.45) dot(IDX_CLOSED, x + (hash(i + 9, j) - 0.5) * s * 0.8, y + (hash(i, j + 9) - 0.5) * s * 0.8, s * (0.04 + 0.16 * clamp(Dc, 0, 1))); return; }
+    if (offT >= 0 && v < 0.02) return;
+    // 별: 대부분은 아주 작은 점이고, 극소수만 밝다 (거듭제곱 분포). 자리는 격자에서 벗어나 있다
+    const b = clamp(lit ? Lv * 0.7 : Dt * 0.25, 0, 1.3);
+    if (h > 0.12 + 0.3 * clamp(b, 0, 1)) return;
+    const jx = x + (hash(i + 17, j + 3) - 0.5) * s * 0.95, jy = y + (hash(i + 5, j + 29) - 0.5) * s * 0.95;
+    const mag = Math.pow(hash(i + 41, j + 7), 5) * (0.35 + 1.1 * b) * (1 - 0.6 * dust) * (0.9 + 0.1 * Math.sin(ph * 1.7 + h * 50));
+    const tint = Math.floor(hash(i + 2, j + 61) * 3), z = cellZ;
+    const lv = (q) => tint * 21 + clamp(Math.floor(q * 20), 0, 20);            // 색 묶음 × 밝기
+    dot(lv(0.35 + 0.65 * clamp(mag * 1.5 + 0.2, 0, 1)), jx, jy, s * z * (0.035 + 0.1 * clamp(mag, 0, 1.2)));
+    if (mag > 0.42 && state.mode !== 'dot') {                                   // 밝은 별만 회절선: 가늘고, 끝으로 갈수록 스러진다
+      const L1 = s * z * (0.6 + 3.2 * (mag - 0.42)), c1 = Math.cos(SPK), s1 = Math.sin(SPK), lw = Math.max(0.6, s * z * 0.022);
+      for (const [f, q] of [[1, 0.25], [0.5, 0.55], [0.22, 0.95]]) {
+        seg(lv(q), lw, jx - c1 * L1 * f, jy - s1 * L1 * f, jx + c1 * L1 * f, jy + s1 * L1 * f);
+        seg(lv(q), lw, jx + s1 * L1 * f, jy - c1 * L1 * f, jx - s1 * L1 * f, jy + c1 * L1 * f);
+      }
+    }
+  }
+  const SPK = -0.34;
+
+  // ── E 필름: 칸은 감광된 은입자다. 빛이 과하게 들수록 하얗게 번지고, 닫히면 음화로 뒤집힌다
+  const FILM = [[0, 4, 14, 22], [0.28, 18, 58, 86], [0.55, 58, 134, 186], [0.78, 176, 222, 240], [1, 250, 253, 255]];
+  function filmCol(t) {
+    t = clamp(t, 0, 1); let m = 0; while (m < FILM.length - 2 && t >= FILM[m + 1][0]) m++;
+    const P = FILM[m], Q = FILM[m + 1], f = (t - P[0]) / (Q[0] - P[0]);
+    return [P[1] + (Q[1] - P[1]) * f, P[2] + (Q[2] - P[2]) * f, P[3] + (Q[3] - P[3]) * f];
+  }
+  function drawE(x, y, i, j, Lv, ang, A, Dt, throb, Dc) {
+    const h = hash(i, j), dd = Math.hypot(x - swX, y - swY) / scale, lit = Lv >= 0.06;
+    const expo = clamp(Dt * 0.8 + (lit ? Lv * 0.8 : 0), 0, 2) * (1 + 0.2 * throb) * (0.6 + 0.35 * vivP);
+    let t = 1 - Math.exp(-expo * 1.6), neg = 0, burn = 0;                     // 필름의 감광 곡선: 밝은 곳이 먼저 포화된다
+    if (offT >= 0) {
+      const tl = offT - (dd * 0.22 + h * 0.06);
+      if (tl > 0) { burn = clamp(1 - Math.abs(tl - 0.06) / 0.08, 0, 1); neg = clamp((tl - 0.12) / 0.4, 0, 1); }   // 타고, 뒤집힌다
+    } else if (live < 0.5) neg = 1;
+    let c = filmCol(t);
+    if (neg > 0) {                                      // 음화: 짙은 곳이 밝은 크림색, 빈 곳은 검푸른 녹색
+      const nv = clamp(Dc * 0.95, 0, 1), m = nv * nv * (3 - 2 * nv);
+      const N = [22 + 200 * m, 36 + 190 * m, 30 + 168 * m];
+      c = [c[0] * (1 - neg) + N[0] * neg, c[1] * (1 - neg) + N[1] * neg, c[2] * (1 - neg) + N[2] * neg];
+    }
+    if (burn > 0) c = [c[0] + (255 - c[0]) * burn, c[1] + (250 - c[1]) * burn, c[2] + (240 - c[2]) * burn];
+    putPx(i, j, c[0], c[1], c[2]);
+    // 빛줄기: 노출이 넘친 자리에서 긴 번짐이 빛의 방향으로 긁힌다
+    if (lit && neg === 0 && Lv > 0.7 && h < 0.03 + 0.04 * A) {   // 필름의 번짐은 드물게: 세로 기둥(F)과 겹치지 않도록
+      const L2 = s * cellZ * (1.2 + 3.2 * clamp(Lv - 0.45, 0, 1.2)), ci = clamp(Math.floor(clamp(Lv - 0.2, 0, 1) * (NCOL - 1)), 0, NCOL - 1);
+      seg(ci, Math.max(1, s * cellZ * 0.22), x - Math.cos(ang) * L2 * 0.3, y - Math.sin(ang) * L2 * 0.3, x + Math.cos(ang) * L2, y + Math.sin(ang) * L2);
+    }
+  }
+
+  // ── F 픽셀 소팅: 칸은 화소다. 밝은 화소가 아래로 녹아 흘러내리고, 닫힐수록 줄기가 길어진다. 무지갯빛은 홀로그램처럼 돈다
+  function hsv(hh, sa, va) {
+    const f = (n) => { const k = (n + hh * 6) % 6; return va - va * sa * Math.max(0, Math.min(k, 4 - k, 1)); };
+    return [f(5) * 255, f(3) * 255, f(1) * 255];
+  }
+  function drawF(x, y, i, j, Lv, ang, A, Dt, throb, Dc) {
+    const hh = hash(i, j), dd = Math.hypot(x - swX, y - swY) / scale, lit = Lv >= 0.06, k = j * cols + i;
+    const v = clamp(Dt * 0.85 + (lit ? Lv * 0.8 : 0), 0, 1.8) * (1 + 0.2 * throb);
+    const lum = 1 - Math.exp(-v * 1.6);
+    let rest = 0, burn = 0;
+    if (offT >= 0) { const tl = offT - (dd * 0.22 + hh * 0.06); if (tl > 0) { burn = clamp(1 - Math.abs(tl - 0.05) / 0.07, 0, 1); rest = clamp((tl - 0.1) / 0.35, 0, 1); } }
+    else if (live < 0.5) rest = 1;
+    // 기본색: 어둠은 검붉은 회색, 중간은 산호빛 빨강, 밝은 곳은 분홍빛 흰색
+    const FP = [[0, 18, 14, 18], [0.3, 70, 62, 68], [0.45, 150, 70, 72], [0.6, 236, 62, 64], [0.78, 250, 170, 176], [1, 255, 248, 250]];
+    let m2 = 0; while (m2 < FP.length - 2 && lum >= FP[m2 + 1][0]) m2++;
+    const P2 = FP[m2], Q2 = FP[m2 + 1], f2 = (lum - P2[0]) / (Q2[0] - P2[0]);
+    let c = [P2[1] + (Q2[1] - P2[1]) * f2, P2[2] + (Q2[2] - P2[2]) * f2, P2[3] + (Q2[3] - P2[3]) * f2];   // 검은 회색 → 산호빛 빨강 → 분홍빛 흰색
+    const ir = hsv((-sweep / 6.2832 + i * 0.011 + lum * 0.7) % 1 + 1, 0.55, 1), ia = (0.12 + 0.45 * vivP) * Math.pow(lum, 1.3);   // 홀로그램 무지개
+    c = [c[0] + (ir[0] - c[0]) * ia, c[1] + (ir[1] - c[1]) * ia, c[2] + (ir[2] - c[2]) * ia];
+    if (rest > 0) { const g = 18 + 150 * Math.pow(clamp(Dc, 0, 1), 1.2); c = [c[0] * (1 - rest) + g * 0.95 * rest, c[1] * (1 - rest) + g * rest, c[2] * (1 - rest) + g * 1.04 * rest]; }
+    if (burn > 0) c = [c[0] + (255 - c[0]) * burn, c[1] + (255 - c[1]) * burn * 0.8, c[2] + (255 - c[2]) * burn];
+    putPx(i, j, c[0], c[1], c[2]); FRES[k] = rest;
+  }
+  // 세로 줄마다 밝은 화소를 아래로 끌고 내려간다 (픽셀 소팅의 흘러내림)
+  function sortColumns() {
+    const d = imgData.data, base = 0.84 + 0.145 * clamp(kc * 1.1, 0, 1), thr = 80 + 60 * (1 - vivP);
+    for (let i = 0; i < cols; i++) {
+      const dec = Math.min(0.992, base * (0.97 + 0.03 * hash(i, 777)) + (hash(i >> 2, 91) > 0.8 ? 0.02 : 0));
+      let cr = 0, cg = 0, cb = 0, cl = 0;
+      for (let j = 0; j < rows; j++) {
+        const n = (j * cols + i) * 4, k = j * cols + i;
+        if (FRES[k] > 0.5) { cl = 0; continue; }
+        const l = (d[n] + d[n + 1] + d[n + 2]) / 3;
+        if (cl * dec > l && cl > thr) { cr *= dec; cg *= dec; cb *= dec; cl *= dec; d[n] = cr; d[n + 1] = cg; d[n + 2] = cb; }
+        else { cr = d[n]; cg = d[n + 1]; cb = d[n + 2]; cl = l; }
+      }
+    }
+  }
+  // 색수차: 빨강과 파랑 판을 좌우로 어긋나게 겹친다
+  function rgbSplit(img, x0, y0, w, hh, off) {
+    const TIN = ['#ff0000', '#00ff00', '#0000ff'];
+    for (let q = 0; q < 3; q++) {
+      const t = CH[q]; if (t.c.width !== img.width || t.c.height !== img.height) { t.c.width = img.width; t.c.height = img.height; }
+      t.x.globalCompositeOperation = 'copy'; t.x.imageSmoothingEnabled = false; t.x.drawImage(img, 0, 0);
+      t.x.globalCompositeOperation = 'multiply'; t.x.fillStyle = TIN[q]; t.x.fillRect(0, 0, img.width, img.height);
+    }
+    ctx.save(); ctx.imageSmoothingEnabled = false;
+    ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#000'; ctx.fillRect(x0 - off * 2, y0, w + off * 4, hh);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.drawImage(CH[0].c, x0 - off, y0, w, hh); ctx.drawImage(CH[1].c, x0, y0, w, hh); ctx.drawImage(CH[2].c, x0 + off, y0 + off * 0.3, w, hh);
+    ctx.restore();
+  }
+
+  // ── G 액체 크롬: 칸의 값이 녹은 금속의 높이다. 닫힐수록 표면이 크게 일렁여 글자와 형태가 흘러내리고,
+  //    등고선이 물결무늬로 겹친다. 열화상처럼 빨강·형광 초록·크롬 은빛으로 칠한다
+  function drawG(x, y, i, j, Lv, ang, A, Dt, throb, Dc) {
+    const hh = hash(i, j), dd = Math.hypot(x - swX, y - swY) / scale, lit = Lv >= 0.06, k = j * cols + i;
+    let rest = 0, burn = 0;
+    if (offT >= 0) { const tl = offT - (dd * 0.22 + hh * 0.06); if (tl > 0) { burn = clamp(1 - Math.abs(tl - 0.06) / 0.08, 0, 1); rest = clamp((tl - 0.12) / 0.4, 0, 1); } }
+    else if (live < 0.5) rest = 1;
+    FIELD[k * 2] = clamp(Dt * 0.85 + (lit ? Lv * 0.7 : 0), 0, 2) * (1 + 0.15 * throb);
+    FIELD[k * 2 + 1] = clamp(Dc, 0, 1);
+    FRES[k] = rest; BURN[k] = burn;
+  }
+  const GPAL = [[0, 4, 2, 3], [0.3, 30, 4, 6], [0.4, 96, 10, 12], [0.45, 232, 36, 22], [0.49, 74, 240, 46], [0.6, 56, 190, 50], [0.66, 120, 128, 120], [0.84, 228, 234, 228], [1, 255, 255, 255]];
+  function gcol(t) { t = clamp(t, 0, 1); let m = 0; while (m < GPAL.length - 2 && t >= GPAL[m + 1][0]) m++; const P = GPAL[m], Q = GPAL[m + 1], f = (t - P[0]) / (Q[0] - P[0]); return [P[1] + (Q[1] - P[1]) * f, P[2] + (Q[2] - P[2]) * f, P[3] + (Q[3] - P[3]) * f]; }
+  function sampleF(fx, fy, ch) {
+    fx = clamp(fx, 0, cols - 1.001); fy = clamp(fy, 0, rows - 1.001);
+    const i0 = fx | 0, j0 = fy | 0, u = fx - i0, v = fy - j0, a = FIELD[(j0 * cols + i0) * 2 + ch], b = FIELD[(j0 * cols + i0 + 1) * 2 + ch];
+    const c = FIELD[((j0 + 1) * cols + i0) * 2 + ch], d = FIELD[((j0 + 1) * cols + i0 + 1) * 2 + ch];
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  }
+  function meltColumns(A) {
+    const amp = (1.2 + 9 * A) * live, t0 = ph * 0.04, bands = 11 + 8 * vivP;
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const k = j * cols + i, rest = FRES[k], burn = BURN[k];
+      const wx = (fbm(i * 0.045 + t0, j * 0.045) - 0.5) * amp * (1 - rest), wy = (fbm(i * 0.045 - 3.1, j * 0.045 + t0 * 1.3) - 0.5) * amp * 1.4 * (1 - rest) + amp * 0.25 * (1 - rest);   // 아래로 흘러내린다
+      const ch = rest > 0.5 ? 1 : 0;
+      const v0 = sampleF(i + wx, j - wy, ch), vx = sampleF(i + wx + 1, j - wy, ch), vy = sampleF(i + wx, j - wy + 1, ch);
+      const t = 1 - Math.exp(-v0 * 1.35);
+      const shade = clamp(0.6 + (vx - v0) * 5.5 - (vy - v0) * 4.5, 0.12, 1.5);             // 금속의 법선: 비스듬한 빛을 받아 은빛으로
+      const ring = (t * bands * 0.5) % 1, rip = ring < 0.07 ? 0.85 : 1;   // 등고선은 가늘게만
+      let c = gcol(t);
+      const chrome = sstep(0.6, 0.68, t);
+      const m = (1 - chrome) * (0.85 + 0.15 * shade) + chrome * shade;
+      const rp2 = chrome > 0.2 ? rip : t > 0.44 ? 0.8 + 0.2 * rip : 1;
+      c = [c[0] * m * rp2, c[1] * m * rp2, c[2] * m * rp2];
+      if (rest > 0) {                                  // 굳은 금속: 무채색 부조
+        const e = clamp(40 + 150 * Math.pow(v0, 0.9) * shade, 0, 255), rr = (v0 * 9) % 1 < 0.12 ? 0.8 : 1;
+        c = [c[0] * (1 - rest) + e * rr * 0.96 * rest, c[1] * (1 - rest) + e * rr * rest, c[2] * (1 - rest) + e * rr * 0.94 * rest];
+      }
+      if (burn > 0) c = [c[0] + (120 - c[0]) * burn, c[1] + (255 - c[1]) * burn, c[2] + (90 - c[2]) * burn];
+      putPx(i, j, c[0], c[1], c[2]);
+    }
+  }
+
+  // ── H 서툰 모델링: 블렌더 뷰포트. 냉장고와 도넛은 로우폴리 메시이고, 빛은 누가 급히 뽑아낸 원뿔·상자 메시다.
+  //    닫힐수록 빛 메시가 길어지고 꼭짓점이 떨리며(리깅이 덜 된 것처럼), 닫히는 순간 메시가 하나씩 접혀 사라지고 Solid 모드로 돌아간다
+  const BL = { faces: [], lightOn: 1 };
+  function V(x, y, z) { return [x, y, z]; }
+  function nrm(a, b, c) { const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2]; const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, l = Math.hypot(nx, ny, nz) || 1; return [nx / l, ny / l, nz / l]; }
+  function face(pts, col, opt) { BL.faces.push(Object.assign({ pts, col, a: 1, edge: 'rgba(0,0,0,0.55)', emit: false, cull: true, inner: false }, opt || {})); }
+  function quad(a, b, c, d, col, opt) { face([a, b, c, d], col, opt); }
+  function boxF(x0, x1, y0, y1, z0, z1, col, opt) {
+    const p = [V(x0, y0, z1), V(x1, y0, z1), V(x1, y1, z1), V(x0, y1, z1), V(x0, y0, z0), V(x1, y0, z0), V(x1, y1, z0), V(x0, y1, z0)];
+    quad(p[0], p[1], p[2], p[3], col, opt); quad(p[5], p[4], p[7], p[6], col, opt); quad(p[4], p[0], p[3], p[7], col, opt);
+    quad(p[1], p[5], p[6], p[2], col, opt); quad(p[3], p[2], p[6], p[7], col, opt); quad(p[4], p[5], p[1], p[0], col, opt);
+  }
+  const zcOf = (q) => -(q[1] - cam.y) * sp - (q[2] - cam.z) * cp;
+  function renderBlender(o, A, k) {
+    BL.faces.length = 0;
+    const th = state.deg * Math.PI / 180, thL = Math.max(state.deg, CLOSED) * Math.PI / 180;
+    const rendered = live > 0.5 && !(offT >= 0 && offT > 0.16);            // 뷰포트 셰이딩: 렌더 미리보기 ↔ Solid
+    const W0 = (c) => rendered ? c : [0.74, 0.74, 0.74];
+    const t = 0.05, m = 0.06, ch = (BH - 2 * m) / 4;
+    swX = W / 2; swY = H / 2;
+
+    // 바닥 격자
+    ctx.lineWidth = 1;
+    for (let g = -12; g <= 12; g++) {
+      const q = g * 0.25, major = g % 4 === 0;
+      ctx.strokeStyle = major ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)';
+      let a = proj(q, 0, -3), b = proj(q, 0, Math.min(1.5, cam.z - 0.6)); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+      a = proj(-3, 0, Math.min(q, 1.5)); b = proj(3, 0, Math.min(q, 1.5)); if (q <= 1.5) { ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+    }
+    let a0 = proj(-3, 0, 0), b0 = proj(3, 0, 0); ctx.strokeStyle = 'rgba(255,72,90,0.75)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(a0[0], a0[1]); ctx.lineTo(b0[0], b0[1]); ctx.stroke();
+    a0 = proj(0, 0, -3); b0 = proj(0, 0, 1.5); ctx.strokeStyle = 'rgba(128,200,40,0.75)'; ctx.beginPath(); ctx.moveTo(a0[0], a0[1]); ctx.lineTo(b0[0], b0[1]); ctx.stroke();
+
+    // 냉장고 몸체 (속이 빈 상자: 안쪽 면은 법선을 뒤집어 붙였다)
+    const wh = W0([0.86, 0.87, 0.9]), inner = W0([0.95, 0.96, 0.98]);
+    boxF(-0.5, -0.5 + t, 0, BH, -BD, 0, wh); boxF(0.5 - t, 0.5, 0, BH, -BD, 0, wh);
+    boxF(-0.5, 0.5, BH - t, BH, -BD, 0, wh); boxF(-0.5, 0.5, 0, t, -BD, 0, wh); boxF(-0.5, 0.5, 0, BH, -BD, -BD + t, inner);
+    for (let s2 = 1; s2 < 4; s2++) boxF(-0.5 + t, 0.5 - t, m + s2 * ch - 0.012, m + s2 * ch + 0.012, -BD + t, -0.06, W0([0.8, 0.9, 0.95]), { a: rendered ? 0.55 : 1 });   // 유리 선반
+
+    // 도넛: 로우폴리 토러스 (10×6), 누워 있다. 급히 만든 듯 면이 그대로 보인다
+    const dy0 = m + ch, dcx = -0.04, dcz = -0.36, R = 0.2, r = 0.075, US = 10, VS = 6;
+    for (let u = 0; u < US; u++) for (let v = 0; v < VS; v++) {
+      const P = (uu, vv) => { const U = uu / US * 6.2832, Vv = vv / VS * 6.2832, rr = R + r * Math.cos(Vv); return V(dcx + Math.cos(U) * rr, dy0 + r + r * Math.sin(Vv), dcz + Math.sin(U) * rr); };
+      const top = Math.sin((v + 0.5) / VS * 6.2832) > -0.1;
+      quad(P(u, v), P(u, v + 1), P(u + 1, v + 1), P(u + 1, v), W0(top ? [0.93, 0.55, 0.7] : [0.8, 0.55, 0.32]), { edge: 'rgba(0,0,0,0.35)' });
+    }
+
+    // 문: 경첩(오른쪽 앞 모서리)을 중심으로 돈다. 선택된 오브젝트라 주황 윤곽
+    const cth = Math.cos(th), sth = Math.sin(th), dT = 0.07;
+    const dp = (along, y, out) => V(0.5 - cth * along + sth * out, y, sth * along + cth * out);   // along: 경첩에서 문 끝까지, out: 두께
+    const dq = [dp(0, 0, 0), dp(1, 0, 0), dp(1, BH, 0), dp(0, BH, 0), dp(0, 0, dT), dp(1, 0, dT), dp(1, BH, dT), dp(0, BH, dT)];
+    const dc = W0([0.84, 0.85, 0.88]), sel = { edge: 'rgba(255,160,40,0.95)', sel: true };
+    quad(dq[4], dq[5], dq[6], dq[7], dc, sel); quad(dq[1], dq[0], dq[3], dq[2], W0([0.92, 0.93, 0.95]), sel);
+    quad(dq[0], dq[4], dq[7], dq[3], dc, sel); quad(dq[5], dq[1], dq[2], dq[6], dc, sel); quad(dq[7], dq[6], dq[2], dq[3], dc, sel); quad(dq[0], dq[1], dq[5], dq[4], dc, sel);
+    const hA = 0.86, h0 = dp(hA, 0.75, dT), h1 = dp(hA, 1.2, dT), h2 = dp(hA, 1.2, dT + 0.04), h3 = dp(hA, 0.75, dT + 0.04);
+    quad(h0, h1, h2, h3, W0([0.3, 0.3, 0.32]), { cull: false });
+
+    // 빛 메시: 틈으로 나가는 절두체 + 광선 막대들 + 바닥의 빛 웅덩이
+    const fX = 0.5 - Math.cos(thL), fZ = Math.sin(thL), LZ = LAMPZ, LY = BH * 0.72;
+    const aj = Math.atan2(-LZ, -0.5), af = Math.atan2(fZ - LZ, fX), ar = Math.atan2(-LZ, 0.5), lo = Math.max(af, ar);
+    const jit = (n, amp) => [amp * (vnoise(ph * 1.3, n * 1.7) - 0.5) * 2, amp * (vnoise(n * 2.3, ph * 1.1) - 0.5) * 2, amp * (vnoise(ph * 0.9 + 7, n * 3.1) - 0.5) * 2];
+    const amp = 0.015 + 0.12 * A, len = 1.1 + 1.6 * k + 0.6 * (1 - o);
+    const meshes = [];
+    if (live > 0.5 || offT >= 0) {
+      // 절두체: 가까운 면은 문틈, 먼 면은 len만큼 뻗는다. 옆면은 2칸으로만 나눴다
+      const ray = (ang, d) => V(Math.cos(ang) * d, 0, LZ + Math.sin(ang) * d);
+      const dNear = (a) => (0 - LZ) / Math.max(0.05, Math.sin(a));
+      const cols3 = [[0.98, 0.84, 0.36], [1, 0.9, 0.5]];
+      const pL0 = ray(aj, dNear(aj)), pR0 = ray(lo, dNear(lo)), pL1 = ray(aj, dNear(aj) + len), pR1 = ray(lo, dNear(lo) + len);
+      const yb0 = 0.05, yt0 = BH - 0.1, yb1 = 0, yt1 = BH + 0.35 + 0.6 * k;
+      let vi = 0;
+      const J = (P, s0) => { const j = jit(vi++, amp * s0); return V(P[0] + j[0], Math.max(0, P[1] + j[1]), P[2] + j[2]); };
+      const mid = (P, Q, f) => V(P[0] + (Q[0] - P[0]) * f, P[1] + (Q[1] - P[1]) * f, P[2] + (Q[2] - P[2]) * f);
+      const fr = [];
+      for (const [x0, x1] of [[pL0, pL1], [pR0, pR1]]) {
+        const b0 = V(x0[0], yb0, x0[2]), t0 = V(x0[0], yt0, x0[2]), b1 = V(x1[0], yb1, x1[2]), t1 = V(x1[0], yt1, x1[2]);
+        fr.push([J(b0, 0.3), J(t0, 0.3), J(mid(b0, b1, 0.5), 1), J(mid(t0, t1, 0.5), 1), J(b1, 1.4), J(t1, 1.4)]);
+      }
+      const [L, Rr] = fr;
+      meshes.push([[L[0], L[2], L[3], L[1]], [L[2], L[4], L[5], L[3]], [Rr[1], Rr[3], Rr[2], Rr[0]], [Rr[3], Rr[5], Rr[4], Rr[2]],
+                   [L[1], L[3], Rr[3], Rr[1]], [L[3], L[5], Rr[5], Rr[3]], [L[4], Rr[4], Rr[5], L[5]]].map(pts => ({ pts, col: cols3[0], a: 0.11 })));
+      // 광선 막대: 네모난 기둥을 빛 방향으로 대충 늘여 놓았다. 닫힐수록 가늘고 많아지며 떨린다
+      const nRay = 3 + Math.round(5 * (1 - o));
+      for (let q = 0; q < nRay; q++) {
+        const u = (q + 0.5) / nRay, a = lo + (aj - lo) * u + 0.04 * Math.sin(ph * 0.9 + q * 2.1), y = 0.35 + (BH - 0.7) * hash(q, 5);
+        const d0 = dNear(a), d1 = d0 + len * (0.6 + 0.5 * hash(q, 9)), w = 0.03 + 0.05 * o;
+        const c = Math.cos(a), s1 = Math.sin(a), px = -s1 * w, pz = c * w, rise = (y - LY) * 0.35 + 0.25 * k * (hash(q, 3) - 0.5);
+        const P0 = V(c * d0, y, LZ + s1 * d0), P1 = V(c * d1, y + rise, LZ + s1 * d1);
+        const bx = (P, dx, dy, dz) => J(V(P[0] + dx, P[1] + dy, P[2] + dz), 0.8);
+        const q0 = [bx(P0, px, -w, pz), bx(P0, -px, -w, -pz), bx(P0, -px, w, -pz), bx(P0, px, w, pz)];
+        const q1 = [bx(P1, px, -w, pz), bx(P1, -px, -w, -pz), bx(P1, -px, w, -pz), bx(P1, px, w, pz)];
+        meshes.push([[q0[0], q0[1], q1[1], q1[0]], [q0[1], q0[2], q1[2], q1[1]], [q0[2], q0[3], q1[3], q1[2]], [q0[3], q0[0], q1[0], q1[3]], [q1[0], q1[1], q1[2], q1[3]]]
+          .map(pts => ({ pts, col: cols3[1], a: 0.42 })));
+      }
+      // 바닥의 빛 웅덩이: 꼭짓점 9개짜리 삐뚤빼뚤한 n각형
+      const pool = [V(pL0[0], 0.002, pL0[2])];
+      for (let q = 0; q <= 7; q++) { const a = aj + (lo - aj) * q / 7, d = dNear(a) + len * (0.75 + 0.2 * Math.sin(q * 3.7 + ph * 0.5)); pool.push(J(V(Math.cos(a) * d, 0.002, LZ + Math.sin(a) * d), 0.6)); }
+      pool.push(V(pR0[0], 0.002, pR0[2]));
+      meshes.push([{ pts: pool, col: [1, 0.86, 0.45], a: 0.3, floor: true }]);
+      const cS = Math.pow(1 - o, 1.2);                                   // 틈 자체: 빛나는 판 하나를 대충 끼워 넣었다
+      meshes.push([{ pts: [J(V(-0.5, 0.05, 0.004), 0.2), J(V(-0.5, BH - 0.05, 0.004), 0.2), J(V(fX, BH - 0.05, fZ + 0.004), 0.2), J(V(fX, 0.05, fZ + 0.004), 0.2)], col: [1, 0.97, 0.8], a: 0.25 + 0.65 * cS }]);
+    }
+    // 꺼질 때: 메시가 하나씩 제자리로 접혀 사라진다 (먼저 광선 막대, 마지막이 절두체)
+    meshes.forEach((ms, mi) => {
+      let sc = 1;
+      if (offT >= 0) sc = clamp(1 - (offT - (meshes.length - 1 - mi) * 0.035) / 0.12, 0, 1);
+      if (sc <= 0) return;
+      for (const f of ms) {
+        const cen = f.pts.reduce((acc, q) => [acc[0] + q[0] / f.pts.length, acc[1] + q[1] / f.pts.length, acc[2] + q[2] / f.pts.length], [0, 0, 0]);
+        const pts = sc < 1 ? f.pts.map(q => V(cen[0] + (q[0] - cen[0]) * sc, cen[1] + (q[1] - cen[1]) * sc * sc, cen[2] + (q[2] - cen[2]) * sc)) : f.pts;
+        face(pts, f.col, { emit: true, a: f.a * (0.4 + 0.6 * sc), cull: false, edge: 'rgba(255,196,80,0.9)', verts: true, floor: f.floor });
+      }
+    });
+
+    // 그리기: 먼 것부터 (화가 알고리즘). 가끔 순서가 틀려 면이 비치는 것도 '서툰' 맛으로 둔다
+    const Ld = [0.45, 0.8, 0.4];
+    for (const f of BL.faces) f.z = f.floor ? 99 : f.pts.reduce((acc, q) => acc + zcOf(q), 0) / f.pts.length;
+    BL.faces.sort((p1, p2) => p2.z - p1.z);
+    const vdots = [];
+    for (const f of BL.faces) {
+      if (f.pts.some(q => zcOf(q) < 0.2)) continue;
+      const n = nrm(f.pts[0], f.pts[1], f.pts[2]);
+      if (f.cull) { const c0 = f.pts[0]; if (n[0] * (cam.x - c0[0]) + n[1] * (cam.y - c0[1]) + n[2] * (cam.z - c0[2]) < 0) continue; }
+      const P = f.pts.map(q => proj(q[0], q[1], q[2]));
+      let col;
+      if (f.emit) col = 'rgba(' + Math.round(f.col[0] * 255) + ',' + Math.round(f.col[1] * 255) + ',' + Math.round(f.col[2] * 255) + ',' + f.a.toFixed(3) + ')';
+      else {
+        let l = 0.38 + 0.62 * Math.max(0, n[0] * Ld[0] + n[1] * Ld[1] + n[2] * Ld[2]);
+        if (rendered) {                                  // 안쪽 면은 냉장고 등불을 받는다
+          const cz = f.pts[0][2]; if (cz < -0.05 && Math.abs(f.pts[0][0]) < 0.5) l += 0.35;
+        } else l = 0.3 + 0.7 * Math.max(0, n[0] * 0.3 + n[1] * 0.7 + n[2] * 0.65);
+        l = Math.min(1.15, l);
+        col = 'rgba(' + Math.round(f.col[0] * 255 * l) + ',' + Math.round(f.col[1] * 255 * l) + ',' + Math.round(f.col[2] * 255 * l) + ',' + f.a + ')';
+      }
+      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); for (let q = 1; q < P.length; q++) ctx.lineTo(P[q][0], P[q][1]); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = f.edge; ctx.lineWidth = f.sel ? 2 : 1; ctx.stroke();
+      if (f.verts) for (const q of P) vdots.push(q);
+    }
+    ctx.fillStyle = 'rgba(255,170,40,0.95)'; for (const q of vdots) ctx.fillRect(q[0] - 2, q[1] - 2, 4, 4);   // 편집 모드 꼭짓점
+
+    // 등(라이트 오브젝트) 아이콘: 켜지면 노랗게, 꺼지면 검게
+    const lp = proj(0, LY, LZ), lf = proj(0, 0, LZ), on = rendered;
+    ctx.strokeStyle = on ? 'rgba(255,214,90,0.95)' : 'rgba(20,20,20,0.9)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(lp[0], lp[1], 6, 0, 6.2832); ctx.stroke(); ctx.beginPath(); ctx.arc(lp[0], lp[1], 11, 0, 6.2832); ctx.setLineDash([3, 3]); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(lp[0], lp[1] + 11); ctx.lineTo(lf[0], lf[1]); ctx.stroke(); ctx.setLineDash([]);
+    // 3D 커서
+    const c3 = proj(0, 0, 0.3); ctx.lineWidth = 1.5;
+    for (let q = 0; q < 8; q++) { ctx.strokeStyle = q % 2 ? '#fff' : '#e03030'; ctx.beginPath(); ctx.arc(c3[0], c3[1], 9, q * Math.PI / 4, (q + 1) * Math.PI / 4); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(c3[0] - 16, c3[1]); ctx.lineTo(c3[0] - 5, c3[1]); ctx.moveTo(c3[0] + 5, c3[1]); ctx.lineTo(c3[0] + 16, c3[1]); ctx.moveTo(c3[0], c3[1] - 16); ctx.lineTo(c3[0], c3[1] - 5); ctx.moveTo(c3[0], c3[1] + 5); ctx.lineTo(c3[0], c3[1] + 16); ctx.stroke();
+    blenderUI(rendered);
+  }
+  // 블렌더 인터페이스: 머리 메뉴, 뷰포트 머리, 도구 막대, 아웃라이너, 축 기즈모, 타임라인
+  function blenderUI(rendered) {
+    const f = '11px "IBM Plex Sans KR", system-ui, sans-serif', narrow = W < 720;
+    ctx.save(); ctx.font = f; ctx.textBaseline = 'middle';
+    const topH = 24 + (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0);
+    ctx.fillStyle = '#232323'; ctx.fillRect(0, 0, W, 24);
+    ctx.fillStyle = '#e8e8e8'; let x = 10;
+    for (const s3 of ['🟠', 'File', 'Edit', 'Render', 'Window', 'Help']) { ctx.fillText(s3, x, 12); x += ctx.measureText(s3).width + 14; }
+    if (!narrow) { x += 10; for (const s3 of ['Layout', 'Modeling', 'Sculpting', 'UV Editing', 'Shading', 'Animation']) { const w = ctx.measureText(s3).width + 16; if (s3 === 'Layout') { ctx.fillStyle = '#3d3d3d'; ctx.fillRect(x - 8, 3, w, 18); } ctx.fillStyle = s3 === 'Layout' ? '#fff' : '#b0b0b0'; ctx.fillText(s3, x, 12); x += w + 2; } }
+    // 뷰포트 머리
+    ctx.fillStyle = 'rgba(40,40,40,0.92)'; ctx.fillRect(0, 24, W, 26);
+    ctx.fillStyle = '#d0d0d0'; ctx.fillText('Object Mode ▾', 10, 37); ctx.fillText('View   Select   Add   Object', 110, 37);
+    const sx = W - (narrow ? 12 : 250) - 100;
+    ['Wire', 'Solid', 'Material', 'Rendered'].forEach((m2, q) => {
+      const cx2 = sx + q * 24, act = rendered ? q === 3 : q === 1;
+      ctx.fillStyle = act ? '#4772b3' : '#545454'; ctx.fillRect(cx2 - 10, 29, 20, 16);
+      ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx2, 37, 5, 0, 6.2832);
+      if (q === 0) ctx.stroke(); else { ctx.fillStyle = q === 1 ? '#ccc' : q === 2 ? '#e0a0c0' : '#ffe08a'; ctx.fill(); }
+    });
+    // 도구 막대
+    ctx.fillStyle = 'rgba(40,40,40,0.9)'; ctx.fillRect(6, 60, 30, 190);
+    for (let q = 0; q < 8; q++) { ctx.fillStyle = q === 1 ? '#4772b3' : '#5a5a5a'; ctx.fillRect(11, 65 + q * 23, 20, 18); }
+    // 왼쪽 위 글씨
+    ctx.fillStyle = '#e6e6e6'; ctx.fillText('User Perspective', 46, 64);
+    ctx.fillStyle = '#bdbdbd'; ctx.fillText('(' + Math.round(state.deg) + ') Collection | Door', 46, 80);
+    ctx.fillStyle = rendered ? '#ffd46a' : '#9a9a9a'; ctx.fillText(rendered ? 'Viewport Shading: Rendered · Light ON' : 'Viewport Shading: Solid · Light OFF', 46, 96);
+    // 아웃라이너
+    if (!narrow) {
+      const ox = W - 240;
+      ctx.fillStyle = 'rgba(40,40,40,0.95)'; ctx.fillRect(ox, 24, 240, 210); ctx.fillStyle = '#2b2b2b'; ctx.fillRect(ox, 24, 240, 22);
+      ctx.fillStyle = '#ccc'; ctx.fillText('Outliner', ox + 10, 35);
+      const items = [['Scene Collection', 0], ['Collection', 1], ['Camera', 2], ['Fridge', 2], ['Door', 2], ['Donut', 2], ['Shelf.00' + 1, 2], ['Light', 2], ['LightBeam.001', 2], ['LightBeam.002', 2]];
+      items.forEach(([nm, d], q) => {
+        const y = 58 + q * 17;
+        if (nm === 'Door') { ctx.fillStyle = '#334d80'; ctx.fillRect(ox + 2, y - 8, 236, 16); }
+        ctx.fillStyle = nm === 'Door' ? '#ffb040' : nm.startsWith('Light') ? (rendered ? '#ffe08a' : '#8a8a8a') : '#d6d6d6';
+        ctx.fillText((d ? '▸ ' : '▾ ') + nm, ox + 10 + d * 14, y);
+        ctx.fillStyle = '#888'; ctx.fillText('👁', ox + 216, y);
+      });
+    }
+    // 축 기즈모
+    const gx = W - (narrow ? 40 : 280), gy = 90;
+    for (const [dx, dy, c, lbl] of [[0, -26, '#6a9f35', 'Y'], [26, 4, '#e8465a', 'X'], [-6, -14, '#4a7ad8', 'Z']]) {
+      ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + dx, gy + dy); ctx.stroke();
+      ctx.fillStyle = c; ctx.beginPath(); ctx.arc(gx + dx, gy + dy, 7, 0, 6.2832); ctx.fill(); ctx.fillStyle = '#111'; ctx.textAlign = 'center'; ctx.fillText(lbl, gx + dx, gy + dy + 0.5); ctx.textAlign = 'left';
+    }
+    // 타임라인: 프레임 = 문 각도
+    const ty = H - (document.body.classList.contains('folded') ? 58 : 44) - 0, tl = 60, tr = W - 20;
+    ctx.fillStyle = 'rgba(35,35,35,0.95)'; ctx.fillRect(0, ty - 14, W, 36);
+    ctx.fillStyle = '#8a8a8a';
+    for (let fr2 = 0; fr2 <= 110; fr2 += 10) { const xx = tl + (tr - tl) * fr2 / 110; ctx.fillRect(xx, ty - 6, 1, 10); ctx.fillText(String(fr2), xx + 3, ty + 12); }
+    for (const kf of [0, CLOSED, 55, 110]) { const xx = tl + (tr - tl) * kf / 110; ctx.fillStyle = '#e0c040'; ctx.beginPath(); ctx.moveTo(xx, ty - 5); ctx.lineTo(xx + 4, ty - 1); ctx.lineTo(xx, ty + 3); ctx.lineTo(xx - 4, ty - 1); ctx.closePath(); ctx.fill(); }
+    const px = tl + (tr - tl) * state.deg / 110; ctx.fillStyle = '#4772b3'; ctx.fillRect(px - 1, ty - 12, 2, 24); ctx.fillRect(px - 14, ty - 14, 28, 12);
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(String(Math.round(state.deg)), px, ty - 8); ctx.textAlign = 'left';
+    ctx.fillStyle = '#9a9a9a'; ctx.fillText('Verts 1,284 · Faces 1,102 · Tris 2,204', 10, ty - 24);
+    ctx.restore();
+  }
+
+  function makeGrain() {
+    grainTiles = [0, 1, 2].map(() => {
+      const c = document.createElement('canvas'); c.width = c.height = 200; const g = c.getContext('2d'), d = g.createImageData(200, 200);
+      for (let n = 0; n < d.data.length; n += 4) { const v = 128 + (Math.random() + Math.random() + Math.random() - 1.5) * 150; d.data[n] = d.data[n + 1] = d.data[n + 2] = v; d.data[n + 3] = 255; }
+      g.putImageData(d, 0, 0); return ctx.createPattern(c, 'repeat');
+    });
+  }
+  // 칸마다 쓴 색을 부드럽게 키워 한 장의 연속된 상으로 만든다
+  function flushImage() {
+    const T = state.type;
+    if (T === 'F') sortColumns();
+    if (T === 'G') meltColumns(curA);
+    ictx.putImageData(imgData, 0, 0);
+    if (T === 'F') {                                     // 화소는 뭉개지 않는다: 각진 기둥 그대로, 빨강·파랑이 어긋난다
+      rgbSplit(IMG, offX - s / 2, offY - s / 2, cols * s, rows * s, s * (0.3 + 2.2 * curA) * live + s * 0.2);
+      return;
+    }
+    uctx.imageSmoothingEnabled = true; uctx.imageSmoothingQuality = 'high'; uctx.globalCompositeOperation = 'copy';
+    uctx.filter = 'blur(' + (T === 'E' ? 3 : T === 'G' ? 1.5 : 4) + 'px)'; uctx.drawImage(IMG, 0, 0, UP.width, UP.height); uctx.filter = 'none';
+    ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.globalCompositeOperation = state.type === 'D' ? 'lighter' : 'source-over';
+    ctx.drawImage(UP, offX - s / 2, offY - s / 2, cols * s, rows * s);
+    ctx.restore();
+  }
+  // 필름의 물성: 입자, 먼지, 긁힘, 빛샘, 게이트 가장자리
+  function filmOverlay() {
+    if (!grainTiles) makeGrain();
+    if (++grainTick % 2 === 0) grainIdx = (grainIdx + 1) % 3;
+    ctx.save();
+    const leak = live * (0.18 + 0.4 * (1 - vivP));
+    if (leak > 0.01) {                                  // 빛샘: 틈 쪽에서 주황빛이 번진다
+      const lg = ctx.createRadialGradient(swX, swY, 0, swX, swY, scale * 0.9);
+      lg.addColorStop(0, 'rgba(255,150,90,' + (leak * 0.55).toFixed(3) + ')'); lg.addColorStop(0.5, 'rgba(255,90,60,' + (leak * 0.18).toFixed(3) + ')'); lg.addColorStop(1, 'rgba(255,80,60,0)');
+      ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = lg; ctx.fillRect(0, 0, W, H);
+    }
+    ctx.globalCompositeOperation = 'overlay'; ctx.globalAlpha = 0.5;
+    ctx.translate((grainIdx * 67) % 200, (grainIdx * 131) % 200); ctx.fillStyle = grainTiles[grainIdx]; ctx.fillRect(-200, -200, W + 400, H + 400);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.hypot(W, H) * 0.58);   // 렌즈 주변부의 어둠
+    vg.addColorStop(0, 'rgba(0,10,16,0)'); vg.addColorStop(1, 'rgba(0,10,16,0.55)');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(230,245,250,0.18)'; ctx.lineWidth = 1;                   // 드물게 스치는 긁힘
+    for (let n = 0; n < 2; n++) { const sx = ((Math.sin(n * 91.7 + Math.floor(ph * 0.6) * 3.1) * 0.5 + 0.5) * W); ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx + 6, H); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(240,250,255,0.85)'; ctx.fillRect(0, 0, Math.max(3, W * 0.006), H);   // 필름 게이트의 흰 가장자리
+    ctx.fillStyle = 'rgba(240,250,255,0.35)'; ctx.fillRect(W - Math.max(2, W * 0.003), 0, Math.max(2, W * 0.003), H);
+    ctx.restore();
+  }
+
+  // ── 공간감: 틈에서 나온 빛을 3차원의 부피로 그린다 (바닥의 빛 웅덩이 + 허공의 빛기둥)
+  function volColor() {
+    const T = state.type;
+    return T === 'F' ? [255, 200, 225] : T === 'G' ? [150, 255, 120] : T === 'C' ? [255, 150, 70] : T === 'D' ? [200, 150, 255] : T === 'E' ? [210, 244, 255] : T === 'B' ? [255, 90, 170] : [255, 255, 255];
+  }
+  const VOL = document.createElement('canvas'), vctx = VOL.getContext('2d');
+  function drawVolume(fX, fZ, lo, aj, gM, phiC, beta, nR, o, power, dark, gT, gB) {
+    const fade = offT >= 0 ? Math.max(0, 1 - offT / 0.15) : 1;
+    if (live < 0.05 || dark <= 0.02 || fade <= 0) return;
+    const [r, g, b] = volColor(), Rm = 1.2 + 2.2 * power * 0.6, a0 = live * dark * fade;
+    // 부피는 1/5 해상도에 그렸다가 부드럽게 키운다: 빛의 가장자리가 칼같이 서지 않는다
+    const vw = Math.max(2, Math.round(cv.width / 5)), vh = Math.max(2, Math.round(cv.height / 5));
+    if (VOL.width !== vw || VOL.height !== vh) { VOL.width = vw; VOL.height = vh; }
+    const main = ctx; ctx = vctx;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = state.type === 'B' ? '#fff' : '#000'; ctx.fillRect(0, 0, vw, vh);
+    ctx.setTransform(dpr / 5, 0, 0, dpr / 5, 0, 0);
+    ctx.save(); ctx.globalCompositeOperation = state.type === 'B' ? 'multiply' : 'lighter';
+    const foot = proj(0, 0, LAMPZ), pts = [];                          // 바닥의 빛 웅덩이: 실제 3차원 쐐기를 투영한다
+    const zMax = cam.z - 0.75;                                       // 카메라 뒤로 넘어가는 바닥은 자른다
+    for (let t = 0; t <= 12; t++) { const a = lo + (aj - lo) * t / 12, sa = Math.sin(a), rr = sa > 0.01 ? Math.min(Rm, (zMax - LAMPZ) / sa) : Rm; pts.push(proj(Math.cos(a) * rr, 0, LAMPZ + sa * rr)); }
+    const far = Math.max(...pts.map(q => Math.hypot(q[0] - foot[0], q[1] - foot[1])));
+    const fg = ctx.createRadialGradient(foot[0], foot[1], 0, foot[0], foot[1], far);
+    const fa = (state.type === 'B' ? 0.35 : state.type === 'D' ? 0 : 0.3) * a0 * Math.min(1.6, power);
+    if (state.type === 'B') { fg.addColorStop(0, 'rgba(255,200,230,1)'); fg.addColorStop(1, 'rgba(255,255,255,1)'); }
+    else { fg.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',' + fa.toFixed(3) + ')'); fg.addColorStop(0.45, 'rgba(' + r + ',' + g + ',' + b + ',' + (fa * 0.35).toFixed(3) + ')'); fg.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0)'); }
+    ctx.fillStyle = fg; ctx.beginPath(); ctx.moveTo(foot[0], foot[1]); pts.forEach(q => ctx.lineTo(q[0], q[1])); ctx.closePath(); ctx.fill();
+    if (state.type === 'D') {                                          // 성운: 선 모양의 빛줄기 없이, 틈 둘레에 퍼진 빛무리만
+      const gr = ctx.createRadialGradient(gM[0], gM[1], 0, gM[0], gM[1], scale * (0.5 + 0.5 * Math.min(1.5, power)));
+      gr.addColorStop(0, 'rgba(255,190,220,' + (0.22 * a0).toFixed(3) + ')'); gr.addColorStop(0.4, 'rgba(200,90,160,' + (0.08 * a0).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(80,40,120,0)');
+      ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+    } else if (state.type !== 'B') {                                   // 허공의 빛기둥: 가까이 올수록 넓고 옅어진다
+      const len = scale * (0.9 + 1.4 * power * 0.5);
+      for (let n = -nR; n <= nR; n++) {
+        const u = n / Math.max(1, nR), a = phiC + u * beta * 0.9;
+        const wdt = beta / (nR + 1) * (0.35 + 0.2 * hash(n + 20, 4)), al = 0.045 * a0 * (1 - Math.abs(u) * 0.6) * Math.min(1.4, power);   // 빛막은 겹칠수록 밝아지므로 한 장은 옅게
+        const rg = ctx.createRadialGradient(gM[0], gM[1], 0, gM[0], gM[1], len);
+        rg.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',' + al.toFixed(3) + ')'); rg.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0)');
+        ctx.fillStyle = rg; ctx.beginPath();                          // 틈의 선 전체에서 뻗는 빛의 막
+        ctx.moveTo(gT[0], gT[1]); ctx.lineTo(gT[0] + Math.cos(a - wdt) * len, gT[1] + Math.sin(a - wdt) * len);
+        ctx.lineTo(gB[0] + Math.cos(a + wdt) * len, gB[1] + Math.sin(a + wdt) * len); ctx.lineTo(gB[0], gB[1]); ctx.closePath(); ctx.fill();
+      }
+    }
+    // 틈의 번짐: 좁을수록 밝게 몰린다
+    const conc = Math.pow(clamp((0.55 - o) / 0.5, 0, 1), 1.1), gb = ctx.createRadialGradient(gM[0], gM[1], 0, gM[0], gM[1], scale * (0.12 + 0.3 * conc));
+    const ba = (0.08 + 0.5 * conc) * a0;
+    gb.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',' + ba.toFixed(3) + ')'); gb.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0)');
+    ctx.fillStyle = gb; ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+    ctx = main;
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low';
+    ctx.globalCompositeOperation = state.type === 'B' ? 'multiply' : 'lighter';
+    ctx.drawImage(VOL, 0, 0, cv.width, cv.height); ctx.restore();
+  }
+  function drawSlit(fX, fZ, o, power, dark) {
+    const fade = offT >= 0 ? Math.max(0, 1 - offT / 0.08) : 1, a0 = live * dark * fade;
+    if (a0 < 0.02) return;
+    const conc = Math.pow(clamp((0.52 - o) / 0.46, 0, 1), 1.2), edge = Math.pow(1 - o, 2.2);   // 틈이 좁아질 때에만 빛이 몰린다
+    if (edge < 0.02) return;
+    const [r, g, b] = volColor(), B = state.type === 'B';
+    const y0 = 0.05, y1 = BH - 0.05;
+    const J0 = proj(-0.5, y0, 0.002), J1 = proj(-0.5, y1, 0.002), D0 = proj(fX, y0, fZ), D1 = proj(fX, y1, fZ);
+    ctx.save(); ctx.globalCompositeOperation = B ? 'multiply' : 'lighter'; ctx.lineCap = 'round';
+    // 틈 자체: 문설주와 문 끝 사이의 면이 빛으로 찬다
+    ctx.fillStyle = B ? 'rgba(255,60,160,' + (0.45 * conc * a0).toFixed(3) + ')' : 'rgba(' + r + ',' + g + ',' + b + ',' + (0.45 * conc * a0).toFixed(3) + ')';
+    ctx.beginPath(); ctx.moveTo(J0[0], J0[1]); ctx.lineTo(J1[0], J1[1]); ctx.lineTo(D1[0], D1[1]); ctx.lineTo(D0[0], D0[1]); ctx.closePath(); ctx.fill();
+    // 문 끝과 문설주의 가장자리: 가장 밝은 선 두 줄, 바깥으로 번진다
+    for (const [P, Q] of [[J0, J1], [D0, D1]]) {
+      for (const [w, al] of [[s * 1.6, 0.12], [s * 0.6, 0.3], [Math.max(1.5, s * 0.16), 0.95]]) {
+        ctx.strokeStyle = B ? 'rgba(255,40,150,' + (al * conc * a0).toFixed(3) + ')' : (al > 0.9 ? 'rgba(255,255,255,' : 'rgba(' + r + ',' + g + ',' + b + ',') + (al * edge * a0).toFixed(3) + ')';
+        ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(P[0], P[1]); ctx.lineTo(Q[0], Q[1]); ctx.stroke();
+      }
+    }
+    // 바닥에 떨어진 틈의 선: 문 아래로 새는 빛
+    const F0 = proj(-0.5, 0, 0.01), F1 = proj(fX, 0, fZ + 0.01);
+    ctx.strokeStyle = B ? 'rgba(255,40,150,' + (0.5 * conc * a0).toFixed(3) + ')' : 'rgba(255,255,255,' + (0.6 * edge * a0).toFixed(3) + ')';
+    ctx.lineWidth = Math.max(1.5, s * 0.25); ctx.beginPath(); ctx.moveTo(F0[0], F0[1]); ctx.lineTo(F1[0], F1[1]); ctx.stroke();
+    ctx.restore();
+  }
+  // 빛 속의 먼지: 틈에서 흘러나와 가라앉는다(찬 공기). 가까운 것은 크고 흐린 보케가 된다
+  function updateMotes(dt, A, fX, fZ, dark) {
+    const N = 110;
+    while (MOTES.length < N) MOTES.push(newMote(true));
+    if (live < 0.05 && offT < 0) return;
+    const [r, g, b] = volColor(), step = Math.min(dt, 0.05);
+    ctx.save(); ctx.globalCompositeOperation = state.type === 'B' ? 'multiply' : 'lighter';
+    for (let n = 0; n < MOTES.length; n++) {
+      const m = MOTES[n];
+      m.z += step * (0.12 + 0.5 * A) * m.sp; m.y -= step * (0.05 + 0.25 * A) * m.sp; m.x += step * 0.08 * Math.sin(ph * 0.5 + n);
+      if (m.z > 3.2 || m.y < 0 || m.x < -2.4 || m.x > 2) { MOTES[n] = newMote(false); continue; }
+      const fr = litFrac(m.x, m.z, fX, fZ); if (fr <= 0) continue;
+      const P = proj(m.x, m.y, m.z), ry = m.y - cam.y, rz = m.z - cam.z, zc = -ry * sp - rz * cp;
+      if (zc < 0.25) continue;
+      const dist = Math.hypot(m.x, m.z - LAMPZ), br = live * dark * fr / (1 + dist * dist * 0.35) * (offT >= 0 ? Math.max(0, 1 - offT / 0.3) : 1);
+      const rad = F * 0.006 * m.sz / zc;
+      if (rad > s * 0.55) {                                          // 가까운 먼지: 초점이 나간 보케
+        const bg2 = ctx.createRadialGradient(P[0], P[1], 0, P[0], P[1], rad);
+        bg2.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',' + (0.12 * br).toFixed(3) + ')'); bg2.addColorStop(0.8, 'rgba(' + r + ',' + g + ',' + b + ',' + (0.08 * br).toFixed(3) + ')'); bg2.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0)');
+        ctx.fillStyle = bg2; ctx.fillRect(P[0] - rad, P[1] - rad, rad * 2, rad * 2);
+      } else {
+        ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + Math.min(1, 0.9 * br).toFixed(3) + ')';
+        ctx.beginPath(); ctx.arc(P[0], P[1], Math.max(0.6, rad), 0, 6.2832); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+  function drawSourceSlit(o) {
+    const fade = offT >= 0 ? Math.max(0, 1 - offT / 0.08) : 1, a0 = live * fade, conc = Math.pow(1 - o, 1.2);
+    if (a0 < 0.02 || state.type === 'H') return;
+    const wide = W >= H, Sx = wide ? 0.12 * W : 0.5 * W, Sy = wide ? 0.5 * H : 0.12 * H, L = (wide ? H : W) * (0.12 + 0.3 * conc), [r, g, b] = volColor(), B = state.type === 'B';
+    ctx.save(); ctx.globalCompositeOperation = B ? 'multiply' : 'lighter'; ctx.lineCap = 'round';
+    const gb = ctx.createRadialGradient(Sx, Sy, 0, Sx, Sy, scale * (0.12 + 0.3 * conc));
+    gb.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',' + ((0.3 + 0.5 * conc) * a0).toFixed(3) + ')'); gb.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0)');
+    if (!B) { ctx.fillStyle = gb; ctx.fillRect(0, 0, W, H); }
+    for (const [w, al] of [[s * 1.4, 0.15], [s * 0.5, 0.35], [Math.max(1.5, s * 0.15), 0.95]]) {
+      ctx.strokeStyle = (B ? 'rgba(255,40,150,' : al > 0.9 ? 'rgba(255,255,255,' : 'rgba(' + r + ',' + g + ',' + b + ',') + (al * (0.3 + 0.7 * conc) * a0).toFixed(3) + ')';
+      ctx.lineWidth = w; ctx.beginPath();
+      if (wide) { ctx.moveTo(Sx, Sy - L / 2); ctx.lineTo(Sx, Sy + L / 2); } else { ctx.moveTo(Sx - L / 2, Sy); ctx.lineTo(Sx + L / 2, Sy); }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  const AMOTES = [];
+  function abstractMotes(dt, A, o) {
+    if (live < 0.05 && offT < 0) return;
+    const wide = W >= H, Sx = wide ? 0.12 * W : 0.5 * W, Sy = wide ? 0.5 * H : 0.12 * H, base = wide ? 0 : Math.PI / 2;
+    const alpha = (2 + 86 * Math.pow(o, 0.9)) * Math.PI / 180, LS = Math.max(W, H), [r, g, b] = volColor();
+    while (AMOTES.length < 90) AMOTES.push({ t: Math.random(), a: (Math.random() * 2 - 1), sp: 0.4 + Math.random(), sz: 0.5 + Math.random() * 2 });
+    const dark = state.type === 'A' ? (inkMode === 'black' ? 1 - volGl / 255 : 1) : 1;
+    ctx.save(); ctx.globalCompositeOperation = state.type === 'B' ? 'multiply' : 'lighter';
+    for (const m of AMOTES) {
+      m.t += Math.min(dt, 0.05) * (0.05 + 0.3 * A) * m.sp; if (m.t > 1) { m.t = 0; m.a = Math.random() * 2 - 1; }
+      const ang = base + m.a * alpha, d = m.t * LS * 0.9, x = Sx + Math.cos(ang) * d, y = Sy + Math.sin(ang) * d;
+      const rad = s * m.sz * (0.12 + 1.6 * m.t * m.t), br = live * dark * (1 - m.t) * (offT >= 0 ? Math.max(0, 1 - offT / 0.3) : 1);
+      const gg = ctx.createRadialGradient(x, y, 0, x, y, rad);
+      gg.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',' + (0.35 * br / (1 + rad / s)).toFixed(3) + ')'); gg.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0)');
+      ctx.fillStyle = gg; ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+    }
+    ctx.restore();
+  }
+  function newMote(anywhere) {
+    return { x: -0.5 + (Math.random() - 0.3) * 1.2, y: 0.2 + Math.random() * 1.7, z: anywhere ? Math.random() * 3 : Math.random() * 0.3, sp: 0.5 + Math.random(), sz: 0.6 + Math.random() * 2.2 };
+  }
+  function stageOf(Lv, A, h) {
+    const q = Lv * 1.1 + A * Lv * 1.4 + (h - 0.5) * 0.35;
+    const full = q < 0.3 ? 0 : q < 0.55 ? 1 : q < 0.85 ? 2 : q < 1.2 ? 3 : q < 1.6 ? 4 : q < 2.1 ? 5 : 6;
+    return state.mode === 'seq' ? full : state.mode === 'dot' ? 0 : state.mode === 'arrow' ? (full < 4 ? 3 : 4) : (full < 6 ? 5 : 6);
+  }
+
+  // ── B 잉크 선: 점이 없다. 가로 선 스크린의 굵기가 곧 명암이고, 빛을 받은 선은 나침처럼 빛의 방향으로 돌아선다
+  function drawB(x, y, i, j, Lv, ang, A, Dt, throb, Dc) {
+    const h = hash(i, j), dd = Math.hypot(x - swX, y - swY) / scale, ci = cellColor(x, y);
+    const lit = Lv >= 0.06, d = clamp(Math.max(Dt, lit ? Lv * 0.5 : 0), 0, 1.05);
+    const wave = 0, half = s * 0.51;
+    const th = Math.min(s * (0.05 + 0.78 * d) * (1 + throb + (0.05 + 0.28 * A) * wave), s * 0.94);
+    const thRest = Math.min(s * (0.05 + 0.78 * clamp(Dc, 0, 1)), s * 0.94);
+    const stage = lit ? stageOf(Lv, A, h) : 0;
+    let a = 0, L = half, lw = th;
+    if (stage >= 1) {
+      let af = ang + 0.1 * A * Math.sin(i * 0.37 + ph * 0.6 + 2 * Math.sin(j * 0.23 - ph * 0.3));
+      if (stage < 3) { af = Math.atan(Math.tan(af)); a = af * clamp((Lv - 0.06) / 0.5, 0, 1); } else a = af;   // 선에는 앞뒤가 없다. 화살표가 되면 생긴다
+      L = s * (0.5 + 0.3 * Math.min(Lv, 1.5)) * (0.88 + 0.12 * wave); lw = s * (0.07 + 0.11 * Math.min(Lv, 2));
+    }
+    if (offT >= 0) {                        // 잉크가 빠진다: 선이 제자리(수평)로 탁 돌아누우며 실선이 되고, 다시 원래 굵기로 번진다
+      const tl = offT - (dd * 0.22 + h * 0.06);
+      if (tl > 0) {
+        if (tl < 0.12) { const p = tl / 0.12, e = p * p * (3 - 2 * p), aa = a * (1 - e), ll = L + (half - L) * e; seg(ci, Math.max(1, lw * (1 - e)), x - Math.cos(aa) * ll, y - Math.sin(aa) * ll, x + Math.cos(aa) * ll, y + Math.sin(aa) * ll); }
+        else { const p = clamp((tl - 0.16) / 0.4, 0, 1), e = p * p * (3 - 2 * p); seg(IDX_CLOSED, Math.max(0.75, thRest * e), x - half, y, x + half, y); }
+        return;
+      }
+    }
+    if (live < 0.5) { seg(IDX_CLOSED, Math.max(0.75, thRest), x - half, y, x + half, y); return; }
+    const nx = Math.cos(a), ny = Math.sin(a);
+    if (stage >= 1) seg(ci, Math.max(0.75, th * 0.35), x - half, y, x + half, y);          // 밑의 스크린은 가늘게 남는다
+    seg(ci, lw, x - nx * L, y - ny * L, x + nx * L, y + ny * L);
+    if (stage === 3 || stage === 4) {
+      const tx = x + nx * L, ty = y + ny * L; chevron(ci, lw, tx, ty, a, s * 0.34);
+      if (stage === 4) for (let b = 0, nb = Math.min(3, 1 + Math.floor(Lv)); b < nb; b++) {
+        const qx = x - nx * (L - s * 0.16 * b), qy = y - ny * (L - s * 0.16 * b);
+        seg(ci, lw * 0.8, qx, qy, qx - Math.cos(a - 1.1) * s * 0.3, qy - Math.sin(a - 1.1) * s * 0.3);        // 풍속 깃
+      }
+    } else if (stage >= 5) {                // 두 번째 잉크로 엇갈려 새긴다
+      const c2 = (ci + 32) % NCOL;
+      seg(c2, lw * 0.8, x + ny * L, y - nx * L, x - ny * L, y + nx * L);
+      if (stage === 6) { const c = Math.cos(a + 0.785), sn = Math.sin(a + 0.785); seg(c2, lw * 0.6, x - c * L, y - sn * L, x + c * L, y + sn * L); }
+    }
+  }
+
+  // ── C 열화상 픽셀: 네모난 칸의 크기는 계단식으로만 변하고, 색은 온도를 따른다. 빛줄기는 앞으로 튀는 불티
+  const BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+  function drawC(x, y, i, j, Lv, ang, A, Dt, throb, Dc) {
+    const h = hash(i, j), dd = Math.hypot(x - swX, y - swY) / scale;
+    const rest = Dc * 1.7 > (BAYER[j & 3][i & 3] + 0.5) / 16;            // 쉬는 화면은 1비트 디더링
+    if (live < 0.5) { if (rest) rect(IDX_CLOSED, x, y, s * 0.8); return; }
+    const lit = Lv >= 0.06, wave = 0;
+    let tr = (Math.atan2(y - swY, x - swX) - sweep) / (2 * Math.PI) + 0.3 * dd;
+    const band = Math.cos(tr * 2 * Math.PI);                              // 반시계로 도는 온도 띠
+    const v = clamp(Dt * 0.62 + (lit ? Lv * 0.42 : 0) + 0.1 * kc * band + (0.02 + 0.1 * A) * wave + throb * 0.25, 0, 1);
+    const d = clamp(Math.max(Dt, lit ? Lv * 0.8 : 0) * (1 + throb + (0.05 + 0.28 * A) * wave), 0, 1);
+    const side = s * Math.min(0.92, 0.14 + 0.8 * Math.ceil(d * 5) / 5);
+    const ci = Math.floor(v * (NCOL - 1));
+    if (offT >= 0) {                        // 칸이 식는다: 온도 눈금을 거꾸로 타고 내려가며 세 계단으로 줄고, 1비트 냉장고가 계단으로 돌아온다
+      const tl = offT - (dd * 0.22 + h * 0.06);
+      if (tl > 0) {
+        if (tl < 0.24) { const p = tl / 0.24; rect(Math.floor(v * (1 - p) * (NCOL - 1)), x, y, side * Math.ceil((1 - p) * 3) / 3); }
+        else if (rest) { const p = clamp((tl - 0.28) / 0.3, 0, 1); rect(IDX_CLOSED, x, y, s * 0.8 * Math.ceil(p * 3) / 3); }
+        return;
+      }
+    }
+    rect(ci, x, y, side);
+    if (v > 0.84) rect(IDX_WHITE, x, y, side * 0.38);                    // 달아오른 심지
+    const stage = lit ? stageOf(Lv, A, h) : 0;
+    if (stage >= 1) {
+      const dx = Math.round(Math.cos(ang)), dy = Math.round(Math.sin(ang)), nS = Math.min(3, (stage + 1) >> 1);
+      const slide = ((ph * 0.9 + h) % 1);                                 // 불티는 칸에서 칸으로 미끄러진다
+      for (let k = 0; k < nS; k++) {
+        const off = (k + slide) * s * 0.5;
+        rect(Math.min(NCOL - 1, ci + 10 + 4 * k), x + dx * off, y + dy * off, Math.max(2, s * (0.34 - 0.08 * k)));
+      }
+    }
+  }
+
+  function drawA(x, y, i, j, Lv, ang, A, Dt, throb, Dc) {
+    const h = hash(i, j), dd = Math.hypot(x - swX, y - swY) / scale;
+    let ci = cellColor(x, y);
+    const lit = Lv >= 0.06;
+    const d = clamp(Math.max(Dt, lit ? Lv * 0.8 : 0), 0, 1.05);
+    const wave = 0;
+    const r = Math.min(s * (0.035 + 0.69 * d) * (1 + throb + (0.05 + 0.28 * A) * wave), s * RMAX);
+
+    if (offT >= 0) {                        // 브라운관의 점 하나가 꺼지듯: 눌려서 선, 선이 줄어 사라지고, 원래의 망점이 돌아온다
+      const tl = offT - (dd * 0.22 + h * 0.06);
+      if (tl > 0) {
+        const rc = Math.min(s * (0.035 + 0.69 * clamp(Dc, 0, 1)), s * RMAX);
+        if (tl < 0.09) { const pa = tl / 0.09, hl = r * (1 + 0.5 * pa); seg(pa > 0.35 ? IDX_WHITE : ci, Math.max(1.2, 2 * r * (1 - pa) * (1 - pa)), x - hl, y, x + hl, y); }
+        else if (tl < 0.19) { const pb = (tl - 0.09) / 0.1, hl = r * 1.5 * (1 - pb) * (1 - pb); if (hl > 0.3) seg(IDX_WHITE, 1.2, x - hl, y, x + hl, y); }
+        else { const pc = clamp((tl - 0.24) / 0.4, 0, 1); dot(IDX_CLOSED, x, y, rc * pc * pc * (3 - 2 * pc)); }
+        return;
+      }
+    }
+
+    let stage = 0;
+    if (lit && state.mode !== 'dot') {
+      const q = Lv * 1.1 + A * Lv * 1.4 + (h - 0.5) * 0.35;
+      const full = q < 0.3 ? 0 : q < 0.55 ? 1 : q < 0.85 ? 2 : q < 1.2 ? 3 : q < 1.6 ? 4 : q < 2.1 ? 5 : 6;
+      stage = state.mode === 'seq' ? full : state.mode === 'arrow' ? (full < 4 ? 3 : 4) : (full < 6 ? 5 : 6);
+    }
+    if (stage === 0) { dot(ci, x, y, r); return; }
+
+    const n1 = Math.sin(i * 0.37 + ph * 0.6 + 2 * Math.sin(j * 0.23 - ph * 0.3));
+    ang += 0.12 * A * n1;                                    // 빛은 곧게 간다: 흔들림은 아주 조금만
+    const Le = Math.min(Lv, 3), nx = Math.cos(ang), ny = Math.sin(ang), lw = s * (0.06 + 0.022 * Le);
+    const pulse = 0.85 + 0.15 * wave, base = ci;
+    dot(base, x, y, r * (stage === 1 ? 0.75 : 0.55));         // 빛줄기 아래에도 점은 남는다: 빔이 가장 밝은 자리가 되도록
+    ci = ci < NCOL ? ci + HOT : ci;
+    if (stage === 1) {
+      const L = s * 0.55 * pulse; seg(ci, lw, x - nx * L, y - ny * L, x + nx * L, y + ny * L);
+    } else if (stage === 2) {
+      const L = s * (0.55 + 0.2 * Math.min(Le, 1.5)) * pulse; seg(ci, lw * 1.2, x - nx * L, y - ny * L, x + nx * L, y + ny * L);
+    } else if (stage <= 4) {
+      const L = s * (0.42 + 0.12 * Math.min(Le, 2)) * pulse, tx = x + nx * L, ty = y + ny * L, bx = x - nx * L, by = y - ny * L;
+      seg(ci, lw * 1.2, bx, by, tx, ty); chevron(ci, lw * 1.2, tx, ty, ang, s * 0.3);
+      if (stage === 4) {
+        const nb = Math.min(3, 1 + Math.floor(Le));
+        for (let b = 0; b < nb; b++) {
+          const qx = bx + nx * s * 0.14 * b, qy = by + ny * s * 0.14 * b;
+          seg(ci, lw, qx, qy, qx - Math.cos(ang - 1.1) * s * 0.22, qy - Math.sin(ang - 1.1) * s * 0.22);
+        }
+      }
+    } else {
+      const nch = stage === 5 ? 2 : 3, gap = s * 0.3, hl = s * 0.34;
+      for (let m = 0; m < nch; m++) { const off = (m - (nch - 1) / 2) * gap + s * 0.12; chevron(ci, lw * 1.5, x + nx * off, y + ny * off, ang, hl); }
+    }
+  }
+
+  function renderFridge(o, A, power, amb, k, k2) {
+    const th = state.deg * Math.PI / 180, thL = Math.max(state.deg, CLOSED) * Math.PI / 180;
+    drawDensity(th);
+    const fX = 0.5 - Math.cos(thL), fZ = Math.sin(thL);
+    const c = 1 - o, r0 = 3 + 1.2 * c, foot = proj(0, 0, LAMPZ);
+
+    // 틈: 왼쪽 문설주와 문 끝 사이. 빛이 빠져나갈 수 있는 각도를 실제로 잰다
+    const aj = Math.atan2(-LAMPZ, -0.5), af = Math.atan2(fZ - LAMPZ, fX), ar = Math.atan2(-LAMPZ, 0.5);
+    const lo = Math.max(af, ar), aw = Math.max(0.01, (aj - lo) / 2), ac = (aj + lo) / 2;
+    const gX = clamp((-0.5 + fX) / 2, -0.5, 0.2), gZ = fZ / 2 * (fX < 0.5 ? 1 : 0.4);
+    const gT = proj(gX, BH * 0.94, gZ), gB = proj(gX, BH * 0.06, gZ);   // 빛은 틈의 위아래 전체에서 샌다
+    const gM = proj(gX, BH / 2, gZ), gD = proj(gX + Math.cos(ac), BH / 2, gZ + Math.sin(ac));
+    const phiC = Math.atan2(gD[1] - gM[1], gD[0] - gM[0]);
+    const beta = clamp(aw * 2.4 + 0.14, 0.14, 1.9), nR = 3 + Math.round(5 * o);
+    const R = scale * (0.3 + 0.25 * o + 2.2 * k), rg = scale * (0.1 + 0.2 * o + 2.6 * k2 * k2 * k2), gPow = 0.1 + 0.3 * k + 0.7 * k2;
+    const dScale = 1.15 - 0.15 * live;
+    swX = gM[0]; swY = gM[1];
+    const darkness = state.type === 'A' ? (inkMode === 'black' ? 1 - volGl / 255 : 1) : 1;
+    drawVolume(fX, fZ, lo, aj, gM, phiC, beta, nR, o, power, darkness, gT, gB);
+    const zRef = cam.y * sp - (0.4 - cam.z) * cp;                   // 냉장고 앞 바닥의 깊이를 기준 1로
+
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const x = offX + i * s, y = offY + j * s, D = dens[j * cols + i];
+      let Lv = 0, ang = 0, G = 0, throb = 0;
+      cellZ = 1;
+      const sx = x - cx, sy = y - cy, dy = -sy * cp - F * sp;
+      if (dy < 0 && D < 0.2) {                                        // 바닥: 가까울수록 크게 (원근)
+        const tt0 = -cam.y / dy, PZ0 = cam.z + tt0 * (sy * sp - F * cp), zc0 = cam.y * sp - (PZ0 - cam.z) * cp;
+        if (zc0 > 0.05) cellZ = clamp(Math.pow(zRef / zc0, 0.75), 0.55, 1.75);
+      }
+      if (live > 0.01) {
+        // 1) 바닥에 떨어지는 빛의 쐐기
+        if (dy < 0 && D < 0.2) {
+          const tt = -cam.y / dy, PX = cam.x + tt * sx, PZ = cam.z + tt * (sy * sp - F * cp);
+          if (PZ > 0.02) {
+            const fr = litFrac(PX, PZ, fX, fZ);
+            if (fr > 0) {
+              const dist = Math.hypot(PX, PZ - LAMPZ);
+              Lv = live * fr * power / (1 + (dist / r0) * (dist / r0));
+              ang = Math.atan2(y - foot[1], x - foot[0]);
+            }
+          }
+        }
+        // 2) 허공으로 뻗는 광선: 틈에서 만화처럼 쏘아져 나간다
+        const tS = clamp((y - gT[1]) / (gB[1] - gT[1]), 0, 1);
+        const vx = x - (gT[0] + (gB[0] - gT[0]) * tS), vy = y - (gT[1] + (gB[1] - gT[1]) * tS);
+        const dist = Math.hypot(vx, vy) + 0.001, phi = Math.atan2(vy, vx);
+        let du = phi - phiC; if (du > Math.PI) du -= 2 * Math.PI; if (du < -Math.PI) du += 2 * Math.PI;
+        const u = du / beta;
+        if (Math.abs(u) < 1 && D < 0.3) {
+          const rp = u * nR * Math.PI + ph * 0.04;
+          const stripe = Math.pow(0.5 + 0.5 * Math.cos(rp), 3);
+          const len = R * (0.72 + 0.28 * hash(Math.round(rp / (2 * Math.PI)) + 50, 3));   // 광선 길이는 고정: 맥박치지 않는다
+          if (dist < len) {
+            const La = live * (1 - sstep(0.8, 1, Math.abs(u))) * stripe * power * 1.05 * Math.pow(1 - dist / len, 0.8);
+            if (La > Lv) { Lv = La; ang = phi; cellZ = Math.max(cellZ, 1 + 0.8 * dist / len); }   // 광선은 관객 쪽으로 다가오며 굵어진다
+          }
+        }
+        // 틈 바로 앞: 좁을수록 짙게 몰린 빛의 띠
+        if (Math.abs(u) < 1.25 && D < 0.3) {
+          const Lc = live * power * 1.1 * Math.exp(-dist / (scale * (0.02 + 0.03 * o))) * (1 - sstep(0.9, 1.25, Math.abs(u)));
+          if (Lc > Lv) { Lv = Lc; ang = phi; }
+        }
+        // 3) 번지는 빛: 닫힐수록 화면 전체를 채운다
+        G = live * gPow / (1 + (dist / rg) * (dist / rg));
+        if (D > 0.15) throb = (0.03 + 0.14 * A) * (vnoise(i * 0.35 + ph * 0.6, j * 0.35 - ph * 0.4) - 0.5);   // 파문 대신 잘게 떨리는 빛
+      }
+      G *= 'DEFG'.includes(state.type) ? 0.4 : 0.5;              // 화면 전체가 하얗게 차는 대신, 틈에서 나오는 빛이 또렷하도록
+      drawCell(x, y, i, j, Lv, ang, A, D * dScale + amb + G, throb, D * 1.15);
+    }
+    cellZ = 1;
+    flush();
+    drawSlit(fX, fZ, o, power, darkness);
+    volState = { fX, fZ, darkness };
+  }
+
+  function renderAbstract(o, A, power, amb, k, k2) {
+    const wide = W >= H, LS = Math.max(W, H);
+    const Sx = wide ? 0.12 * W : 0.5 * W, Sy = wide ? 0.5 * H : 0.12 * H, base = wide ? 0 : Math.PI / 2;
+    const alpha = (2 + 86 * Math.pow(o, 0.9)) * Math.PI / 180;      // 빛이 나갈 수 있는 반각
+    const c = 1 - o, r0 = 1.3 + 0.5 * c, nR = 4 + Math.round(10 * o), kk = 0.3 + 0.55 * k;
+    const rg = 0.08 + 0.2 * o + 2.6 * k2 * k2 * k2, gPow = 0.1 + 0.25 * k + 0.75 * k2;
+    swX = Sx; swY = Sy;
+
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const x = offX + i * s, y = offY + j * s;
+      let Lv = 0, ang = 0, G = 0;
+      if (live > 0.01) {
+        const rx = x - Sx, ry = y - Sy, dn = Math.hypot(rx, ry) / LS;
+        ang = Math.atan2(ry, rx);
+        let da = ang - base; if (da > Math.PI) da -= 2 * Math.PI;
+        const ae = alpha;
+        const mask = 1 - sstep(ae * 0.85 - 0.01, ae + 0.02, Math.abs(da));
+        if (mask > 0) {
+          const stripe = Math.pow(0.5 + 0.5 * Math.cos(da / alpha * nR * Math.PI + ph * 0.04), 3);
+          Lv = live * mask * power / (1 + (dn / r0) * (dn / r0)) * (1 - kk + kk * 1.6 * stripe) + live * power * 1.4 * Math.exp(-dn / (0.012 + 0.04 * o)) * mask;   // 광원 바로 앞의 짙은 빛
+        }
+        G = live * gPow / (1 + (dn / rg) * (dn / rg));
+      }
+      cellZ = Lv > 0.06 ? clamp(0.75 + 1.1 * Math.hypot(x - Sx, y - Sy) / LS, 0.75, 1.7) : 1;
+      drawCell(x, y, i, j, Lv, ang, A, amb + G, 0, 0);
+    }
+    flush();
+  }
+
+  function autoDeg(cl) {
+    const p = cl % 14.8;
+    if (p < 2) return 0;                                   // 닫힘: 암전
+    if (p < 3.6) return 110 * sstep(2, 3.6, p);            // 확 연다
+    if (p < 5.8) return 110;                               // 활짝: 밝고 고요
+    const q = (p - 5.8) / 9;                               // 천천히 닫는다, 끝에서 머뭇거리다
+    return CLOSED + 0.4 + (110 - CLOSED - 0.4) * Math.pow(1 - q, 2);   // 다음 순간 0으로 '탁'
+  }
+
+  const degEl = document.getElementById('deg'), degOut = document.getElementById('degOut');
+  function syncSlider() {
+    degEl.value = state.deg; degOut.textContent = Math.round(state.deg) + '°';
+    degEl.style.setProperty('--p', (state.deg / 110 * 100).toFixed(1) + '%');
+    const pd = document.getElementById('pillDeg'); if (pd) pd.textContent = Math.round(state.deg) + '°';
+  }
+
+  let tick = 0, PR = {};
+  function stepState(dt) {
+    if (state.auto) { clock += dt; state.deg = autoDeg(clock); syncSlider(); }
+    else if (gotoT !== null) {
+      if (gotoT === 0 && state.deg < 30) state.deg = 0;              // 닫힘: 마지막은 탁
+      else state.deg += (gotoT - state.deg) * (1 - Math.exp(-dt / 0.35));
+      if (Math.abs(state.deg - gotoT) < 0.2) { state.deg = gotoT; gotoT = null; }
+      syncSlider();
+    }
+    if (tick++ % 40 === 0) readTheme();
+
+    const open = state.deg >= CLOSED;
+    if (wasOpen && !open) { offT = 0; offEnd = Math.hypot(W, H) / scale * 0.22 + 0.8; }   // 닫히는 순간
+    wasOpen = open;
+    if (open) { offT = -1; live += (1 - live) * (1 - Math.exp(-dt / 0.12)); }
+    else if (offT >= 0) { offT += dt; live = 1; if (offT > offEnd) { offT = -1; live = 0; } }   // 꺼지는 동안 절정의 화면은 살아 있다
+    else live = 0;
+
+    const o = clamp(state.deg, CLOSED, 110) / 110, c = 1 - o;
+    const k = live * sstep(38, CLOSED, state.deg);          // 절정으로 가는 정도
+    const A = live * (0.05 + 0.95 * Math.pow(c, 1.8));      // 운동성: 닫힐수록 극대화
+    curA = A;
+    const power = 0.9 * Math.pow(1 / o, 0.55);              // 같은 빛이 좁은 틈으로 몰린다
+    const amb = live * (0.02 + 0.12 * o);
+    const k2 = live * Math.pow(clamp((62 - state.deg) / 57, 0, 1), 2.2);           // 마지막 구간: 화면이 빛으로 차오른다
+    if (!reduce || state.auto) ph += dt * (0.5 + 8 * A);
+
+    kc = live * clamp((102 - state.deg) / 90, 0, 1);         // 색이 쨍해지는 정도: 거의 전 구간에 걸쳐 천천히
+    vivP = Math.pow(kc, 1.25);
+    if (!reduce || state.auto) sweep -= dt * (0.3 + 0.9 * kc);    // 반시계
+    const dark = inkMode === 'black';
+    const kg = live * clamp((100 - state.deg) / 72, 0, 1);    // 문이 닫힐수록 방이 어두워진다
+    const gl = dark ? Math.round(255 * Math.pow(1 - kg, 1.4)) : 0;
+    volGl = gl;
+    PR = { o, c, k, A, power, amb, k2, dark, kg, gl };
+  }
+  function renderScene(dt) {
+    const { o, A, power, amb, k, k2, dark, kg, gl } = PR, T = state.type;
+    const bg = T === 'H' ? '#3d3d3d' : T === 'G' ? '#050304' : T === 'F' ? '#120a0e' : T === 'E' ? '#04121a' : T === 'D' ? '#020108' : T === 'B' ? '#efece3' : T === 'C' ? '#07040d' : live > 0.5 ? 'rgb(' + gl + ',' + gl + ',' + gl + ')' : '#000';
+    if (T === 'B') buildPaletteB(0.06 + 0.94 * vivP); else if (T === 'C') buildPaletteC();
+    else if (T === 'D') { for (let n = 0; n < 63; n++) { const g = Math.floor(n / 21), t = (n % 21) / 20, c = STARTINT[g]; PAL[n] = 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + (0.12 + 0.88 * t).toFixed(3) + ')'; } PAL[63] = PAL[62]; PAL[IDX_CLOSED] = '#5d6a9a'; PAL[IDX_WHITE] = '#ffffff'; }
+    else if (T === 'F' || T === 'G') { PAL[IDX_CLOSED] = '#777'; PAL[IDX_WHITE] = '#fff'; }
+    else if (T === 'E') { for (let n = 0; n < NCOL; n++) { const t = n / (NCOL - 1); PAL[n] = 'rgba(236,250,255,' + (0.05 + 0.4 * t).toFixed(3) + ')'; } }
+    else buildPaletteA(dark, vivP);
+    glowTint = T === 'E' ? '#ff9a6a' : null;                       // 필름의 헐레이션: 밝은 곳 둘레의 붉은 번짐
+    glowAmt = T === 'H' ? 0.22 * live * (offT >= 0 ? 0 : 1) : T === 'F' ? 0.25 * live + 0.05 : T === 'G' ? 0.3 * live + 0.08 : T === 'D' ? (0.35 + 0.55 * kc) * live + 0.15 : T === 'E' ? 0.5 * live + 0.1 : T === 'B' ? 0 : T === 'C' ? 0.3 * (0.3 + 0.7 * kc) * live : (dark ? kg : 1) * (0.25 + 0.75 * kc) * live;   // 면이 꽉 차면 번짐을 줄여 원색을 지킨다
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = ink; ctx.fillStyle = ink; ctx.lineCap = 'round';
+    darkGround = gl < 40 || live <= 0.5;
+    if (T === 'B') ctx.globalCompositeOperation = 'multiply';      // 잉크는 겹치면 더 어두워진다
+    else if (T === 'A' && darkGround) ctx.globalCompositeOperation = 'lighter';    // 빛은 겹치면 더 밝아진다
+    if ('DEFG'.includes(T)) ctx.globalCompositeOperation = 'source-over';
+    if (T === 'H') renderBlender(o, A, k);
+    else if (state.view === 'fridge') renderFridge(o, A, power, amb, k, k2); else renderAbstract(o, A, power, amb, k, k2);
+    ctx.globalCompositeOperation = 'source-over'; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (T === 'H') {}
+    else if (state.view === 'fridge' && volState) updateMotes(dt, A, volState.fX, volState.fZ, volState.darkness);
+    else { drawSourceSlit(o); abstractMotes(dt, A, o); }
+    if (T === 'E') filmOverlay();
+
+    ctx.globalCompositeOperation = 'source-over';
+    glowAmt *= (1 - 0.45 * k2) * (offT >= 0 ? Math.max(0, 1 - offT / (offEnd - 0.3)) : 1);
+    if (glowAmt > 0.02) {
+      let sw = cv.width >> 1, sh = cv.height >> 1, from = cv;
+      for (let n = 0; n < 3; n++) {                           // 1/4 → 1/8 → 1/16: 절반씩 줄여야 번짐이 깍두기지지 않는다
+        sw = Math.max(2, sw >> 1); sh = Math.max(2, sh >> 1);
+        const g = GLOW[n]; if (g.c.width !== sw || g.c.height !== sh) { g.c.width = sw; g.c.height = sh; }
+        g.x.globalCompositeOperation = 'copy'; g.x.imageSmoothingQuality = n ? 'high' : 'low'; g.x.drawImage(from, 0, 0, sw, sh);
+        if (n === 0 && gl > 0 && T === 'A') { g.x.globalCompositeOperation = 'difference'; g.x.fillStyle = bg; g.x.fillRect(0, 0, sw, sh); }
+        from = g.c;
+      }
+      if (glowTint) for (const q of [GLOW[1], GLOW[2]]) { q.x.globalCompositeOperation = 'multiply'; q.x.fillStyle = glowTint; q.x.fillRect(0, 0, q.c.width, q.c.height); }
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low';
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = Math.min(1, glowAmt * 1.15); ctx.drawImage(GLOW[2].c, 0, 0, cv.width, cv.height);   // 한 겹으로 합친다: 전체 화면 합성은 비싸다
+      ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    }
+    gradePass();
+    if ((SENSOR.on || SENSOR.err) && cv === mainCv) sensorHUD();   // 계기는 본 화면에만
+  }
+  // 화면 왼쪽 위의 작은 계기: 카메라 그림, 신호 막대, 판정
+  function sensorHUD() {
+    const S = SENSOR, pad = 10, w = Math.min(190, W * 0.42), hh = SENSOR.ready ? 96 : 52;
+    ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 46 * dpr); ctx.globalCompositeOperation = 'source-over';   // 왼쪽 위 돌아가기 버튼 아래
+    ctx.fillStyle = 'rgba(8,8,10,0.74)'; ctx.fillRect(pad, pad, w, hh);
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1; ctx.strokeRect(pad + 0.5, pad + 0.5, w - 1, hh - 1);
+    ctx.font = '11px "IBM Plex Sans KR", system-ui, sans-serif'; ctx.textBaseline = 'top';
+    if (!S.ready) { ctx.fillStyle = '#ffb3a0'; wrapText(S.err || '카메라 준비 중…', pad + 8, pad + 8, w - 16, 14); ctx.restore(); return; }
+    ctx.drawImage(S.cvs, pad + 8, pad + 8, 56, 42);                       // 지금 보고 있는 화면
+    ctx.strokeStyle = 'rgba(255,212,94,0.9)'; ctx.strokeRect(pad + 8 + 56 * 0.28, pad + 8 + 42 * 0.17, 56 * 0.44, 42 * 0.66);   // 재는 영역
+    const thrOpen = S.thrOpen, thrClose = S.thrClose;
+    ctx.fillStyle = S.isOpen ? '#ffd45e' : '#9aa3ad'; ctx.fillText(S.isOpen ? '열림 ' + Math.round(S.deg) + '°' : '닫힘', pad + 72, pad + 10);
+    ctx.fillStyle = '#7d858f'; ctx.fillText('sig ' + S.sig.toFixed(0) + ' / ' + thrOpen.toFixed(0), pad + 72, pad + 26);
+    const bx = pad + 72, by = pad + 44, bw = w - 80 - 8;                   // 신호 막대와 두 문턱
+    ctx.fillStyle = '#1b1f24'; ctx.fillRect(bx, by, bw, 8);
+    ctx.fillStyle = S.isOpen ? '#ffd45e' : '#5c94d6'; ctx.fillRect(bx, by, bw * clamp(S.sig / Math.max(1, S.peak), 0, 1), 8);
+    ctx.fillStyle = 'rgba(255,212,94,0.8)'; ctx.fillRect(bx + bw * clamp(thrOpen / Math.max(1, S.peak), 0, 1), by - 2, 1, 12);
+    ctx.fillStyle = 'rgba(120,200,255,0.8)'; ctx.fillRect(bx + bw * clamp(thrClose / Math.max(1, S.peak), 0, 1), by - 2, 1, 12);
+    ctx.fillStyle = '#6f7782'; wrapText(S.err || (S.openRef ? 'sig ' + S.sig.toFixed(0) + ' / 열림 ' + S.openRef.toFixed(0) : '문을 닫고 "닫힘", 활짝 열고 "열림" 보정'), pad + 8, pad + 58, w - 16, 13);
+    ctx.restore();
+  }
+  function wrapText(txt, x, y, w, lh) {
+    let line = '', n = 0;
+    for (const ch of txt) {
+      if (ctx.measureText(line + ch).width > w) { ctx.fillText(line, x, y + n * lh); line = ch; n++; if (n > 2) return; }
+      else line += ch;
+    }
+    ctx.fillText(line, x, y + n * lh);
+  }
+  // 모든 타입에 공통으로 얹는 마감: 가장자리 어둠과 아주 옅은 입자. 컨셉이 달라도 한 식구로 보이게 한다
+  const VIG = { key: '', g: null };
+  function gradePass() {
+    const T = state.type;
+    if (T === 'E') return;                                   // 필름은 자체 마감이 있다
+    ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const vk = W + 'x' + H + T;
+    if (VIG.key !== vk) {                                    // 그라디언트 객체는 크기가 바뀔 때만 새로 만든다
+      const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.hypot(W, H) * 0.56);
+      g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,' + (T === 'H' ? 0.14 : T === 'B' ? 0.1 : 0.26) + ')');
+      VIG.key = vk; VIG.g = g;
+    }
+    ctx.fillStyle = VIG.g; ctx.fillRect(0, 0, W, H);
+    if (T !== 'H' && W > 300 && rs > 0.7) {                  // 입자는 여유가 있을 때만
+      if (!grainTiles) makeGrain();
+      ctx.globalCompositeOperation = 'overlay'; ctx.globalAlpha = T === 'B' ? 0.07 : 0.11;
+      ctx.translate((grainIdx * 53) % 200, (grainIdx * 97) % 200); ctx.fillStyle = grainTiles[grainIdx]; ctx.fillRect(-200, -200, W + 400, H + 400);
+      if (++grainTick % 3 === 0) grainIdx = (grainIdx + 1) % 3;
+    }
+    ctx.restore();
+  }
+
+  // ── 밝기로 여닫힘을 판정하는 센서.
+  // 가장 피해야 할 오판은 '실제로 닫혔는데 열림으로 읽는 것'이다. 그래서 판정은 언제나 닫힘 쪽으로 기울어 있다:
+  //  ① 열림은 느리고 까다롭게(연속 0.22초), 닫힘은 빠르고 너그럽게(0.05초) 받아들인다
+  //  ② 문턱은 두 개(히스테리시스): 열리려면 높게, 닫히려면 훨씬 낮게
+  //  ③ 절대 밝기가 아니라 '어두운 기준값과의 차이'를 본다. 기준값은 어두워질 땐 빠르게, 밝아질 땐 느리게 따라간다
+  //  ④ 주변 밝기(화면 가장자리)를 같이 재서 방 전체가 밝아진 경우와 냉장고 등이 켜진 경우를 구분한다
+  //  ⑤ 잡음의 크기를 실시간으로 재서 문턱을 그 몇 배로 잡는다
+  //  ⑥ 감시 타이머: 아무 변화 없이 오래 '열림'이면 강제로 닫힘으로 되돌리고 기준값을 다시 잡는다
+  //  ⑦ 신호가 의심스러우면(대비가 거의 없으면) 무조건 닫힘
+  const SENSOR = {
+    on: false, ready: false, video: null, cvs: null, cx: null, err: '',
+    v: 0, ref: 0, hotV: 0, base: 0, cbase: 0, ratio0: 1, openRef: 0, thrOpen: 10, thrClose: 4, noise: 1, sig: 0, peak: 20, openT: 0, closeT: 0, hold: 0, isOpen: false, deg: 0, hist: new Float32Array(120), hp: 0,
+    async start() {
+      this.err = '카메라 여는 중…';
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { this.err = '이 브라우저에서는 카메라를 쓸 수 없습니다'; return; }
+      try {
+        let st;
+        try { st = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 320 }, height: { ideal: 240 } }, audio: false }); }
+        catch (e1) { st = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); }
+        this.video = document.createElement('video'); this.video.playsInline = true; this.video.muted = true; this.video.srcObject = st; await this.video.play();
+        this.cvs = document.createElement('canvas'); this.cvs.width = 64; this.cvs.height = 48; this.cx = this.cvs.getContext('2d', { willReadFrequently: true });
+        this.on = true; this.ready = true; this.err = ''; this.base = -1;
+      } catch (e) {
+        const n = e && e.name;
+        this.err = n === 'NotAllowedError' ? '카메라 권한이 거부되었습니다. 아티팩트를 새 창으로 열고 다시 시도해 주세요'
+          : n === 'NotFoundError' ? '카메라를 찾을 수 없습니다'
+          : n === 'NotReadableError' ? '다른 앱이 카메라를 쓰는 중입니다'
+          : '카메라를 열 수 없습니다 (' + (n || 'error') + ')';
+        this.on = false;
+      }
+    },
+    // 지금 상태를 '닫힘'으로 기준 삼는다: 설치 현장에서 한 번 눌러 두면 판정이 가장 정확해진다
+    calibrate() {
+      if (!this.ready) return;
+      this.base = this.hotV; this.cbase = this.hotV - this.ref; this.ratio0 = this.hotV / Math.max(1, this.ref);
+      this.isOpen = false; this.openT = 0; this.deg = 0; this.note('닫힘 기준을 잡았습니다');
+    },
+    // 문을 활짝 연 상태에서 한 번 눌러 두면, 그 밝기를 100%로 삼아 문턱과 각도가 현장에 맞춰진다
+    calibrateOpen() {
+      if (!this.ready) return;
+      this.openRef = Math.max(3, this.hotV - this.base);
+      this.peak = this.openRef; this.note('열림 기준 ' + this.openRef.toFixed(0) + ' 을 잡았습니다');
+    },
+    note(t) { this.err = t; clearTimeout(this._nt); this._nt = setTimeout(() => { if (this.err === t) this.err = ''; }, 1800); },
+    stop() { this.on = false; this.ready = false; if (this.video && this.video.srcObject) this.video.srcObject.getTracks().forEach(t => t.stop()); },
+    update(dt) {
+      if (!this.on || !this.ready || this.video.readyState < 2) return;
+      this.cx.drawImage(this.video, 0, 0, 64, 48);
+      const d = this.cx.getImageData(0, 0, 64, 48).data, HB = new Int32Array(32);
+      let roi = 0, rn = 0, ref = 0, fn = 0;
+      for (let j = 0; j < 48; j++) for (let i = 0; i < 64; i++) {
+        const n = (j * 64 + i) * 4, y = 0.2126 * d[n] + 0.7152 * d[n + 1] + 0.0722 * d[n + 2];
+        if (i > 16 && i < 48 && j > 6 && j < 42) { roi += y; rn++; HB[Math.min(31, y >> 3)]++; }
+        else if (i < 7 || i > 57 || j < 4 || j > 44) { ref += y; fn++; }
+      }
+      roi /= rn || 1; ref /= fn || 1;
+      // 틈은 화면에서 가느다란 밝은 띠다. 평균은 희석되므로 '가장 밝은 8%의 평균'을 본다
+      let want = Math.max(1, Math.round(rn * 0.08)), acc = 0, cnt = 0;
+      for (let b = 31; b >= 0 && cnt < want; b--) { const take = Math.min(HB[b], want - cnt); acc += take * (b * 8 + 4); cnt += take; }
+      const hot = acc / Math.max(1, cnt);
+      const prev = this.hotV; this.hotV = hot; this.v = roi; this.ref = ref;
+      if (this.base < 0) { this.base = hot; this.cbase = hot - ref; this.ratio0 = hot / Math.max(1, ref); }
+      this.noise += (Math.abs(hot - prev) - this.noise) * 0.12;
+      this.base += (hot - this.base) * (hot < this.base ? 0.3 : 0.0012) * (dt * 60);   // 어두운 기준값
+      if (!this.isOpen) {                                                              // 닫혀 있을 때만 기준을 다듬는다
+        this.cbase += ((hot - ref) - this.cbase) * 0.02 * (dt * 60);
+        this.ratio0 += (hot / Math.max(1, ref) - this.ratio0) * 0.02 * (dt * 60);
+      }
+      const sAbs = hot - this.base;
+      const sRel = (hot - ref) - this.cbase;
+      const sRatio = (hot / Math.max(1, ref)) / Math.max(0.05, this.ratio0) - 1;        // 자동 노출이 전체 밝기를 흔들어도 비율은 남는다
+      // 주변까지 같이 밝아졌으면(=방 조명) 신호를 깎되 0으로 죽이지는 않는다
+      const gate = clamp(0.4 + 0.6 * sstep(-2, 6, Math.max(sRel, sRatio * 40)), 0.4, 1);
+      this.sig = Math.max(0, sAbs) * gate;
+      const thrOpen = this.openRef > 0 ? Math.max(5, this.noise * 4, this.openRef * 0.22)
+                                       : Math.max(6, this.noise * 5, this.base * 0.1);
+      const thrClose = thrOpen * 0.45;
+      this.thrOpen = thrOpen; this.thrClose = thrClose;
+      if (this.sig > thrOpen) { this.openT += dt; this.closeT = 0; } else if (this.sig < thrClose) { this.closeT += dt; this.openT = 0; } else { this.openT = 0; this.closeT += dt * 0.5; }
+      if (!this.isOpen && this.openT > 0.18) { this.isOpen = true; this.hold = 0; }
+      if (this.isOpen && this.closeT > 0.05) this.isOpen = false;
+      if (this.isOpen) { this.hold += dt; if (this.hold > 120) { this.isOpen = false; this.base = hot; this.hold = 0; } }
+      this.peak = Math.max(this.peak * (1 - 0.01 * dt), this.sig, thrOpen * 1.5, this.openRef || 0);
+      const span = Math.max(1, (this.openRef || this.peak) - thrClose);
+      const target = this.isOpen ? clamp((this.sig - thrClose) / span, 0, 1) * 110 : 0;
+      this.deg += (target - this.deg) * (1 - Math.exp(-dt / (this.isOpen ? 0.18 : 0.04)));
+      if (!this.isOpen && this.deg < CLOSED * 0.8) this.deg = 0;
+      this.hist[this.hp = (this.hp + 1) % this.hist.length] = this.sig / Math.max(1, this.peak);
+      if (state.sensorDrive) { if (state.auto) setAuto(false); gotoT = null; state.deg = this.deg; syncSlider(); }
+    }
+  };
+  function sensorPanel(gx, gy, cw, chh) {
+    ctx.fillStyle = '#0d0f12'; ctx.fillRect(gx, gy, cw, chh);
+    const pad = 10, w = cw - pad * 2, S = SENSOR;
+    ctx.font = '11px "IBM Plex Sans KR", system-ui, sans-serif'; ctx.textBaseline = 'top';
+    if (!S.on) {
+      ctx.fillStyle = '#cfd4da'; ctx.fillText('밝기 센서', gx + pad, gy + pad);
+      ctx.fillStyle = '#8b939c';
+      const lines = ['카메라로 문틈의 밝기를 재서', '여닫힘을 판정합니다.', '', '탭하면 카메라를 켭니다.', S.err || '닫힘 오판을 막는 7단 안전장치'];
+      lines.forEach((t, n) => ctx.fillText(t, gx + pad, gy + pad + 20 + n * 15));
+      return;
+    }
+    const thrOpen = S.thrOpen, thrClose = S.thrClose;
+    ctx.fillStyle = S.isOpen ? '#ffd45e' : '#7a8390';
+    ctx.fillText(S.isOpen ? '열림  ' + Math.round(S.deg) + '°' : '닫힘', gx + pad, gy + pad);
+    ctx.fillStyle = '#6f7782'; ctx.fillText('sig ' + S.sig.toFixed(1) + ' / 열림 ' + thrOpen.toFixed(0) + ' / 닫힘 ' + thrClose.toFixed(0), gx + pad, gy + pad + 16);
+    const gh = Math.max(30, chh - 74), gy0 = gy + pad + 34;
+    ctx.fillStyle = '#15181c'; ctx.fillRect(gx + pad, gy0, w, gh);
+    ctx.strokeStyle = 'rgba(255,212,94,0.5)'; ctx.beginPath(); const yo = gy0 + gh * (1 - thrOpen / Math.max(1, S.peak)); ctx.moveTo(gx + pad, yo); ctx.lineTo(gx + pad + w, yo); ctx.stroke();
+    ctx.strokeStyle = 'rgba(120,200,255,0.45)'; ctx.beginPath(); const yc = gy0 + gh * (1 - thrClose / Math.max(1, S.peak)); ctx.moveTo(gx + pad, yc); ctx.lineTo(gx + pad + w, yc); ctx.stroke();
+    ctx.strokeStyle = '#e8eef5'; ctx.lineWidth = 1; ctx.beginPath();
+    for (let n = 0; n < S.hist.length; n++) {
+      const v = S.hist[(S.hp + 1 + n) % S.hist.length], xx = gx + pad + w * n / (S.hist.length - 1), yy = gy0 + gh * (1 - clamp(v, 0, 1));
+      n ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy);
+    }
+    ctx.stroke();
+    ctx.fillStyle = '#6f7782'; ctx.fillText('밝은쪽 ' + S.hotV.toFixed(0) + ' · 주변 ' + S.ref.toFixed(0) + ' · 기준 ' + S.base.toFixed(0) + (S.openRef ? ' · 열림 ' + S.openRef.toFixed(0) : ''), gx + pad, gy0 + gh + 6);
+  }
+
+  // ── 시험용 루프: 칸마다 그 컨셉을 닮은 짧은 곡을 즉석에서 합성한다. 파일 없이도 소리가 난다.
+  //    모든 음과 잔향이 루프 길이로 감겨 있어서 이음새가 없다. 조성은 다 같이 C단조 (Cm · A♭ · E♭ · B♭)
+  const TESTLOOP = (() => {
+    const TAU = Math.PI * 2, mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+    const rnd = seed => { let s = (seed * 2654435761) >>> 0 || 1; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; };
+    const PROG = [[48, 55, 60, 63], [44, 51, 56, 60], [51, 55, 58, 63], [46, 53, 58, 62]];
+    const PENTA = [60, 63, 65, 67, 70, 72, 75, 77, 79, 82, 84];
+    const NAMES = ['흑백 물결', '잉크 선', '열화상', '성운', '필름', '픽셀 소팅', '액체 크롬', '서툰 모델링', '센서'];
+    function Buf(sr, bpm, bars) { const beat = 60 / bpm, len = Math.round(sr * beat * 4 * bars); return { sr, beat, bar: beat * 4, len, T: len / sr, L: new Float32Array(len), R: new Float32Array(len) }; }
+    // 소리 하나를 루프 위에 얹는다. 끝을 넘으면 앞으로 감긴다. gen(t): 음이 시작되고 흐른 시간 → 한 샘플
+    function add(B, t0, dur, gen, gain, pan = 0) {
+      const { sr, len, L, R } = B, n = Math.round(dur * sr), a = (clamp(pan, -1, 1) + 1) * Math.PI / 4, gl = gain * Math.cos(a), gr = gain * Math.sin(a), dt = 1 / sr;
+      let idx = ((Math.round(t0 * sr) % len) + len) % len;
+      for (let k = 0; k < n; k++) { const v = gen(k * dt); L[idx] += v * gl; R[idx] += v * gr; if (++idx >= len) idx = 0; }
+    }
+    // 루프 전체를 도는 지속음은 루프 안에 정수 번 도는 주파수로 맞춰야 이음새가 없다
+    const loopF = (B, f) => Math.max(1, Math.round(f * B.T)) / B.T;
+    const adsr = (t, dur, a, d, s, r) => (t < a ? t / a : t < a + d ? 1 - (1 - s) * (t - a) / d : s) * clamp((dur - t) / r, 0, 1);
+    const perc = (t, a, tau) => t < a ? t / a : Math.exp(-(t - a) / tau);
+    const blep = (p, dt) => p < dt ? (p /= dt, p + p - p * p - 1) : p > 1 - dt ? (p = (p - 1) / dt, p * p + p + p + 1) : 0;
+    const saw = (f, t, sr) => { const x = f * t, p = x - Math.floor(x), dt = f / sr; return 2 * p - 1 - blep(p, dt); };
+    const sq = (f, t, sr, pw = 0.5) => { const x = f * t, p = x - Math.floor(x), q = (p + pw) % 1, dt = f / sr; return (2 * p - 1 - blep(p, dt)) - (2 * q - 1 - blep(q, dt)); };
+    const tri = (f, t) => { const x = f * t, p = x - Math.floor(x); return 4 * Math.abs(p - 0.5) - 1; };
+    const lp = (sr, fc) => { let y = 0; const a = 1 - Math.exp(-TAU * fc / sr); return x => (y += a * (x - y)); };
+    const pluck = (f, sr, seed, bright) => {       // 카플러스-스트롱 현
+      const N = Math.max(2, Math.round(sr / f)), b = new Float32Array(N), r = rnd(seed); for (let i = 0; i < N; i++) b[i] = r() * 2 - 1;
+      let i = 0; return () => { const v = b[i], nx = b[(i + 1) % N]; b[i] = (v * bright + nx * (1 - bright)) * 0.997; i = (i + 1) % N; return v; };
+    };
+    const noise = seed => { const r = rnd(seed); return () => r() * 2 - 1; };
+    const rms = (a) => { let s = 0; for (let i = 0; i < a.length; i += 4) s += a[i] * a[i]; return Math.sqrt(s / (a.length / 4)) || 1e-9; };
+    // 원형 잔향: 루프를 두 번 돌려 꼬리가 앞머리로 감기게 한다
+    function reverb(B, mix, room = 0.85, damp = 0.28) {
+      const sc = B.sr / 44100, CD = [1116, 1188, 1277, 1356, 1422, 1491], AD = [556, 441];
+      for (let c = 0; c < 2; c++) {
+        const x = c ? B.R : B.L, dry = Float32Array.from(x), wet = new Float32Array(B.len), sp = c ? 23 : 0;
+        const cb = CD.map(d => new Float32Array(Math.round((d + sp) * sc))), ci = CD.map(() => 0), cf = CD.map(() => 0);
+        const ab = AD.map(d => new Float32Array(Math.round((d + sp) * sc))), ai = AD.map(() => 0);
+        for (let pass = 0; pass < 2; pass++) for (let n = 0; n < B.len; n++) {
+          const inp = dry[n] * 0.03; let s = 0;
+          for (let k = 0; k < 6; k++) { const b = cb[k], y = b[ci[k]]; cf[k] = y * (1 - damp) + cf[k] * damp; b[ci[k]] = inp + cf[k] * room; if (++ci[k] >= b.length) ci[k] = 0; s += y; }
+          for (let k = 0; k < 2; k++) { const b = ab[k], bo = b[ai[k]], y = bo - s; b[ai[k]] = s + bo * 0.5; if (++ai[k] >= b.length) ai[k] = 0; s = y; }
+          if (pass) wet[n] = s;
+        }
+        const g = rms(dry) / rms(wet);                   // 젖은 소리의 크기를 마른 소리에 맞춘 뒤 섞는다
+        for (let n = 0; n < B.len; n++) x[n] = dry[n] * (1 - mix * 0.4) + wet[n] * g * mix;
+      }
+    }
+    // 원형 메아리 (핑퐁)
+    function echo(B, time, fb, mix) {
+      const d = Math.round(time * B.sr), len = B.len, xl = Float32Array.from(B.L), xr = Float32Array.from(B.R), yl = new Float32Array(len), yr = new Float32Array(len);
+      for (let pass = 0; pass < 2; pass++) for (let n = 0; n < len; n++) { const m = (n - d + len) % len; yl[n] = xl[n] + fb * yr[m]; yr[n] = xr[n] + fb * yl[m]; }
+      for (let n = 0; n < len; n++) { B.L[n] = xl[n] + (yl[n] - xl[n]) * mix; B.R[n] = xr[n] + (yr[n] - xr[n]) * mix; }
+    }
+    function tone(B, fc) { for (const x of [B.L, B.R]) { let y = x[x.length - 1]; const a = 1 - Math.exp(-TAU * fc / B.sr); for (let p = 0; p < 2; p++) for (let n = 0; n < x.length; n++) { y += a * (x[n] - y); if (p) x[n] = y; } } }
+    function norm(B) {                                  // 아홉 곡의 크기를 맞춘다: 평균 세기 기준, 봉우리는 넘지 않게
+      const r = Math.sqrt((rms(B.L) ** 2 + rms(B.R) ** 2) / 2); let pk = 0;
+      for (let n = 0; n < B.len; n++) pk = Math.max(pk, Math.abs(B.L[n]), Math.abs(B.R[n]));
+      const g = 0.13 / r, K = 0.7, soft = y => { const a = Math.abs(y); return a <= K ? y : Math.sign(y) * (K + 0.25 * Math.tanh((a - K) / 0.25)); };   // 튀는 봉우리만 부드럽게 눌러 준다
+      for (let n = 0; n < B.len; n++) { B.L[n] = soft(B.L[n] * g); B.R[n] = soft(B.R[n] * g); }
+      return B;
+    }
+    const kick = (sr) => t => Math.sin(TAU * (50 * t + 90 * 0.045 * (1 - Math.exp(-t / 0.045)))) * perc(t, 0.002, 0.16);
+
+    const SONGS = [
+      // 1 A 흑백 물결: 순수한 사인 화음이 천천히 밀려오고, 물방울 같은 종소리가 드문드문
+      sr => { const B = Buf(sr, 90, 8), r = rnd(11);
+        PROG.forEach((ch, ci) => ch.forEach((m, k) => { const f = mtof(m), dur = 2 * B.bar + 1.4;
+          add(B, ci * 2 * B.bar, dur, t => (Math.sin(TAU * f * t + 0.03 * Math.sin(TAU * 4.3 * t)) + 0.22 * Math.sin(TAU * 2 * f * t)) * adsr(t, dur, 1.5, 1, 0.75, 1.4), 0.1, (k - 1.5) * 0.35); }));
+        for (let b = 0; b < 32; b++) if (r() < 0.5) { const f = mtof(PENTA[Math.floor(r() * PENTA.length)] + (r() < 0.25 ? 12 : 0));
+          add(B, b * B.beat + (r() < 0.3 ? B.beat / 2 : 0), 2.4, t => Math.sin(TAU * f * t) * perc(t, 0.004, 0.55), 0.08, r() * 1.2 - 0.6); }
+        reverb(B, 0.6, 0.88, 0.3); return B; },
+      // 2 B 잉크 선: 인쇄기처럼 또박또박 뜯는 현의 아르페지오와 종이를 누르는 소리
+      sr => { const B = Buf(sr, 110, 8), s16 = B.beat / 4, pat = [0, 1, 2, 3, 4, 3, 2, 1];
+        for (let step = 0; step < 128; step++) { const ch = PROG[Math.floor(step / 32)], k = pat[step % 8], m = (k === 4 ? ch[0] + 12 : ch[k]) + 12;
+          add(B, step * s16, 0.9, pluck(mtof(m), sr, step + 1, 0.55), 0.22, step % 2 ? 0.35 : -0.35); }
+        for (let b = 0; b < 32; b++) { const ch = PROG[Math.floor(b / 8)]; add(B, b * B.beat, 1.2, pluck(mtof(ch[0] - 12), sr, 500 + b, 0.3), 0.32, 0);
+          if (b % 2) { const n = noise(900 + b), f = lp(sr, 2600); add(B, b * B.beat, 0.12, t => f(n()) * perc(t, 0.001, 0.018), 0.5, 0.1); } }
+        reverb(B, 0.2, 0.7, 0.4); return B; },
+      // 3 C 열화상: 8비트 칩튠. 네모파 아르페지오, 세모파 베이스, 잘게 부서진 잡음
+      sr => { const B = Buf(sr, 120, 8), s16 = B.beat / 4, s8 = B.beat / 2;
+        for (let step = 0; step < 128; step++) { const ch = PROG[Math.floor(step / 32)], m = [ch[0], ch[2], ch[3], ch[0] + 12][step % 4] + 12, f = mtof(m);
+          add(B, step * s16, s16 * 0.92, t => sq(f, t, sr, 0.25) * (1 - t / (s16 * 1.1)), 0.09, 0); }
+        for (let e = 0; e < 64; e++) { const ch = PROG[Math.floor(e / 16)], f = mtof((e % 2 ? ch[1] : ch[0]) - 12);
+          add(B, e * s8, s8 * 0.95, t => tri(f, t), 0.26, 0);
+          if (e % 2) { let hold = 0, v = 0; const n = noise(40 + e); add(B, e * s8, 0.05, t => { if (!(hold++ % 6)) v = n(); return v * perc(t, 0.001, 0.012); }, 0.12, 0.2); } }
+        for (let b = 0; b < 32; b += 2) add(B, b * B.beat, 0.35, kick(sr), 0.5, 0);
+        reverb(B, 0.1, 0.6, 0.5); return B; },
+      // 4 D 성운: 어긋나게 겹친 톱니파 구름, 저 밑의 낮은 울림, 별처럼 반짝이는 종소리가 메아리로 번진다
+      sr => { const B = Buf(sr, 80, 8), r = rnd(44);
+        PROG.forEach((ch, ci) => [ch[0], ch[2], ch[3]].forEach((m, k) => { const f = mtof(m), dur = 2 * B.bar + 2.5, flt = lp(sr, 700 + 300 * ci);
+          add(B, ci * 2 * B.bar, dur, t => flt((saw(f * 0.996, t, sr) + saw(f, t, sr) + saw(f * 1.004, t, sr)) / 3) * adsr(t, dur, 2.5, 1, 0.8, 2.5), 0.2, (k - 1) * 0.6); }));
+        const fd = loopF(B, mtof(36)); add(B, 0, B.T, t => Math.sin(TAU * fd * t) * (0.8 + 0.2 * Math.sin(TAU * t / B.T * 2)), 0.12, 0);
+        for (let s = 0; s < 36; s++) { const f = mtof(PENTA[Math.floor(r() * PENTA.length)] + 24), t0 = r() * B.T;
+          add(B, t0, 3, t => Math.sin(TAU * f * t + 1.8 * Math.exp(-t / 0.3) * Math.sin(TAU * f * 3.51 * t)) * perc(t, 0.003, 0.9), 0.045, r() * 1.8 - 0.9); }
+        echo(B, B.beat * 0.75, 0.4, 0.3); reverb(B, 0.7, 0.9, 0.25); return B; },
+      // 5 E 필름: 초당 24번 도는 영사기, 모터의 웅웅거림, 테이프처럼 출렁이는 피아노
+      sr => { const B = Buf(sr, 96, 8), r = rnd(55);
+        const nClick = Math.round(B.T * 24); for (let c = 0; c < nClick; c++) { const n = noise(7000 + c), f2 = lp(sr, 2400); add(B, c * B.T / nClick, 0.02, t => f2(n()) * perc(t, 0.0008, 0.003), c % 2 ? 0.14 : 0.24, 0.15); }
+        { const n = noise(77), f1 = lp(sr, 180); add(B, 0, B.T, () => f1(n()), 0.3, -0.1); }
+        PROG.forEach((ch, ci) => [0, 1].forEach(half => ch.forEach((m, k) => { const f = mtof(m + 12), t0 = ci * 2 * B.bar + half * B.bar + (half ? B.beat * 2 : 0), dur = 3;
+          const hf = [], env = [], hd = [], hm = [];           // 배음마다 조금씩 높게(현의 비조화성), 높은 배음일수록 빨리 사라진다
+          for (let hh = 1; hh <= 6; hh++) { hf.push(TAU * f * hh * 1.0008 ** hh); env.push(1 / hh ** 1.3); hd.push(Math.exp(-(1.2 + hh * 0.9) / sr)); hm.push(hh * 0.004 * f / 0.55); }
+          add(B, t0, dur, t => { const w = Math.sin(TAU * 0.55 * (t + t0)); let v = 0; for (let q = 0; q < 6; q++) { v += Math.sin(hf[q] * t + hm[q] * w) * env[q]; env[q] *= hd[q]; } return t < 0.003 ? v * t / 0.003 : v; }, half ? 0.07 : 0.1, (k - 1.5) * 0.25); })));
+        tone(B, 4200); reverb(B, 0.28, 0.8, 0.45); return B; },
+      // 6 F 픽셀 소팅: 잘게 잘려 더듬거리는 화음, 비트가 깎인 잡음, 곤두박질치는 디지털 소리
+      sr => { const B = Buf(sr, 128, 8), s32 = B.beat / 8, r = rnd(66);
+        for (let bar = 0; bar < 8; bar++) { const ch = PROG[Math.floor(bar / 2)], gates = []; for (let g = 0; g < 32; g++) gates.push(r() < (g % 8 < 3 ? 0.85 : 0.3));
+          gates.forEach((on, g) => { if (!on) return; const up = r() < 0.15 ? 12 : 0; let hold = 0, v = 0;
+            add(B, bar * B.bar + g * s32, s32 * 0.85, t => { if (!(hold++ % 3)) { v = 0; for (let k = 1; k < 4; k++) v += saw(mtof(ch[k] + 12 + up), t, sr); v = Math.round(v / 3 * 10) / 10; } return v * (1 - t / (s32 * 0.9)); }, 0.12, (g % 4 - 1.5) * 0.3); }); }
+        for (let b = 0; b < 32; b++) { if (b % 2 === 0) add(B, b * B.beat, 0.3, kick(sr), 0.55, 0);
+          else { let hold = 0, v = 0; const n = noise(600 + b); add(B, b * B.beat, 0.15, t => { if (!(hold++ % 8)) v = n(); return v * perc(t, 0.001, 0.05); }, 0.22, 0); } }
+        for (let k = 0; k < 14; k++) { const t0 = Math.floor(r() * 128) * B.beat / 4; add(B, t0, 0.08, t => Math.sin(TAU * (200 * t + 2800 * 0.012 * (1 - Math.exp(-t / 0.012)))) * perc(t, 0.001, 0.03), 0.1, r() * 2 - 1); }
+        reverb(B, 0.08, 0.6, 0.5); return B; },
+      // 7 G 액체 크롬: 출렁이는 FM 베이스, 금속이 울리는 핑, 거꾸로 솟는 물방울
+      sr => { const B = Buf(sr, 100, 8), s16 = B.beat / 4, r = rnd(77), wob = 2 / B.beat;
+        PROG.forEach((ch, ci) => { const f = mtof(ch[0] - 12), dur = 2 * B.bar + 0.05, flt = lp(sr, 1100);
+          add(B, ci * 2 * B.bar, dur, t => flt(Math.sin(TAU * f * t + (1.6 + 1.3 * Math.sin(TAU * wob * t)) * Math.sin(TAU * f * t))) * adsr(t, dur, 0.01, 0.2, 0.9, 0.04), 0.34, 0); });
+        for (let step = 0; step < 128; step++) if (step % 3 === 0) { const ch = PROG[Math.floor(step / 32)], f = mtof(ch[(step / 3) % 4 | 0] + 24);
+          add(B, step * s16, 1.2, t => Math.sin(TAU * f * t + 2.2 * Math.exp(-t / 0.15) * Math.sin(TAU * f * 1.414 * t)) * perc(t, 0.002, 0.35), 0.07, step % 2 ? 0.5 : -0.5); }
+        for (let k = 0; k < 10; k++) { const t0 = r() * B.T, f0 = 350 + r() * 300; add(B, t0, 0.3, t => Math.sin(TAU * (f0 * t + f0 * 2.2 * (t - 0.02 * (1 - Math.exp(-t / 0.02))))) * perc(t, 0.002, 0.07), 0.1, r() * 1.6 - 0.8); }
+        reverb(B, 0.35, 0.82, 0.3); return B; },
+      // 8 H 서툰 모델링: 박자가 조금씩 밀리고 가끔 음을 틀리는 장난감 피아노, 인터페이스 삑 소리, 마우스 딸깍
+      sr => { const B = Buf(sr, 105, 8), s8 = B.beat / 2, r = rnd(88), pat = [0, 1, 2, 3, 2, 1, 2, 3];
+        for (let e = 0; e < 64; e++) { const ch = PROG[Math.floor(e / 16)], m = ch[pat[e % 8]] + 12 + (r() < 0.08 ? 1 : 0), f = mtof(m), jit = (r() - 0.5) * 0.05;
+          add(B, Math.max(0, e * s8 + jit), 0.6, t => (tri(f, t) + 0.3 * Math.sin(TAU * f * 2 * t)) * perc(t, 0.002, 0.18), 0.15, (e % 3 - 1) * 0.3); }
+        for (let b = 0; b < 32; b += 2) { const ch = PROG[Math.floor(b / 8)], f = mtof(ch[0] - 12); add(B, b * B.beat, 0.6, t => Math.sin(TAU * f * t) * perc(t, 0.005, 0.25), 0.26, 0); }
+        for (let k = 0; k < 10; k++) { const t0 = Math.floor(r() * 64) * s8, f = r() < 0.5 ? 1200 : 1600; add(B, t0, 0.06, t => sq(f, t, sr) * (t < 0.05 ? 1 : 0), 0.035, 0.6); }
+        for (let k = 0; k < 6; k++) { const t0 = r() * B.T; for (const dd of [0, 0.11]) { const n = noise(3000 + k * 3 + dd * 100); add(B, t0 + dd, 0.01, t => n() * perc(t, 0.0003, 0.0015), 0.18, -0.5); } }
+        reverb(B, 0.16, 0.7, 0.4); return B; },
+      // 9 센서: 심장 박동, 두 마디마다 한 번 울리는 음파 탐지음, 낮게 깔린 기계음, 잘게 세는 틱
+      sr => { const B = Buf(sr, 60, 4), s16 = B.beat / 4;
+        for (let b = 0; b < 16; b++) { add(B, b * B.beat, 0.2, t => Math.sin(TAU * (45 * t + 20 * 0.04 * (1 - Math.exp(-t / 0.04)))) * perc(t, 0.004, 0.06), 0.55, 0);
+          add(B, b * B.beat + 0.28, 0.2, t => Math.sin(TAU * (55 * t + 20 * 0.03 * (1 - Math.exp(-t / 0.03)))) * perc(t, 0.004, 0.05), 0.38, 0); }
+        for (let p = 0; p < 2; p++) add(B, p * 2 * B.bar + B.beat * 0.5, 3, t => Math.sin(TAU * 1175 * t) * perc(t, 0.002, 0.7), 0.08, p ? 0.4 : -0.4);
+        const h1 = loopF(B, 55), h2 = loopF(B, 110); add(B, 0, B.T, t => Math.sin(TAU * h1 * t) + 0.4 * Math.sin(TAU * h2 * t), 0.05, 0);
+        for (let s = 0; s < 64; s++) if (s % 4 !== 0) add(B, s * s16, 0.01, t => Math.sin(TAU * 3200 * t) * perc(t, 0.0005, 0.002), s % 2 ? 0.02 : 0.035, 0.3);
+        echo(B, B.beat * 0.75, 0.45, 0.35); reverb(B, 0.3, 0.8, 0.35); return B; },
+    ];
+    return { NAMES, count: SONGS.length, build: (i, sr) => norm(SONGS[i](sr)) };
+  })();
+
+  // ── 소리: 칸마다 노래 하나. 그리드에서는 아홉 곡이 한꺼번에 섞이고, 한 칸을 고르면 그 칸의 노래만 남는다.
+  //    재생속도는 문의 열림각을 따른다. 테이프처럼 음정도 같이 움직인다.
+  //    칸 번호: 1 A · 2 B · 3 C · 4 D · 5 E · 6 F · 7 G · 8 H · 9 센서 칸 (그리드의 왼쪽 위부터 오른쪽 아래 순서)
+  // 열림각 → 재생속도
+  //   90°(문이 냉장고 옆면과 일직선) = 1×, 그보다 더 열면 느려져 110°에서 RATE_WIDE
+  //   90°에서 닫혀 갈수록 빨라져 닫히기 직전에 RATE_EDGE, 닫히는 순간 곧바로 RATE_SHUT
+  const DEG_FLAT = 90, RATE_WIDE = 0.7, RATE_EDGE = 1.8, RATE_SHUT = 0.2;
+  function rateForDeg(d) {
+    if (d < CLOSED) return RATE_SHUT;
+    if (d >= DEG_FLAT) return 1 - (1 - RATE_WIDE) * clamp((d - DEG_FLAT) / (110 - DEG_FLAT), 0, 1);
+    return 1 + (RATE_EDGE - 1) * Math.pow((DEG_FLAT - d) / (DEG_FLAT - CLOSED), 1.4);   // 닫히기 직전으로 갈수록 가파르게
+  }
+  const SONG_DIR = 'audio/';                            // index.html 옆의 폴더: audio/1.mp3 … audio/9.mp3 (.m4a .wav .ogg도 됨)
+  const PAN3 = [-0.55, 0, 0.55];                        // 그리드에서 왼쪽·가운데·오른쪽 줄의 소리 위치
+  const AUD = {
+    ctx: null, master: null, on: false, tick: 0, msg: '', triedDir: false, rate: 1,
+    slots: Array.from({ length: 9 }, () => ({ buf: null, src: null, gain: null, pan: null, name: '', rate: 1, trim: 0 })),
+    ensure() {
+      if (this.ctx) return this.ctx;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) { this.msg = '이 브라우저는 소리를 지원하지 않습니다'; return null; }
+      this.ctx = new AC();
+      const comp = this.ctx.createDynamicsCompressor();           // 아홉 곡이 겹쳐도 찢어지지 않게
+      comp.threshold.value = -14; comp.knee.value = 12; comp.ratio.value = 4; comp.attack.value = 0.01; comp.release.value = 0.25;
+      this.master = this.ctx.createGain(); this.master.gain.value = 0;
+      this.master.connect(comp); comp.connect(this.ctx.destination);
+      this.ana = this.ctx.createAnalyser(); this.ana.fftSize = 1024; comp.connect(this.ana); this.anaBuf = new Float32Array(1024);
+      for (const sl of this.slots) {
+        sl.gain = this.ctx.createGain(); sl.gain.gain.value = 0;
+        sl.pan = this.ctx.createStereoPanner ? this.ctx.createStereoPanner() : null;
+        if (sl.pan) { sl.gain.connect(sl.pan); sl.pan.connect(this.master); } else sl.gain.connect(this.master);
+      }
+      return this.ctx;
+    },
+    // 아이폰·아이패드는 무음 스위치가 켜져 있으면 Web Audio를 꺼 버린다. 재생용 세션으로 바꾸고, 소리 없는 오디오를 함께 틀어 둔다
+    unlockIOS() {
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+      if (this.silent) { this.silent.play().catch(() => {}); return; }
+      try {
+        const n = 4410, b = new ArrayBuffer(44 + n * 2), v = new DataView(b), w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+        w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+        v.setUint32(24, 44100, true); v.setUint32(28, 88200, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+        const a = new Audio(URL.createObjectURL(new Blob([b], { type: 'audio/wav' }))); a.loop = true; a.setAttribute('playsinline', ''); a.volume = 0.01;
+        a.play().catch(() => {}); this.silent = a;
+      } catch (e) {}
+    },
+    level() {                                                   // 지금 스피커로 나가는 소리의 세기 (0–1)
+      if (!this.ana || !this.on) return 0;
+      this.ana.getFloatTimeDomainData(this.anaBuf); let s = 0; for (let n = 0; n < this.anaBuf.length; n++) s += this.anaBuf[n] * this.anaBuf[n];
+      return Math.sqrt(s / this.anaBuf.length);
+    },
+    async setOn(v) {
+      if (v && !this.ensure()) { soundUI(); return; }
+      this.on = v;
+      if (v) {
+        this.unlockIOS();                                        // 누른 순간 안에서 해야 한다 (await 전에)
+        try { await this.ctx.resume(); } catch (e) {}
+        setTimeout(() => { if (this.on && this.ctx.state !== 'running') { this.msg = '브라우저가 소리를 막았습니다. 화면을 한 번 눌러 주세요'; soundUI(); } }, 1200);
+        this.master.gain.setTargetAtTime(0.9, this.ctx.currentTime, 0.2);
+        this.autoload().then(() => { if (!this.slots.some(s => s.buf)) this.loadTest(); });   // 노래가 하나도 없으면 시험용 루프로
+      } else if (this.ctx) { this.master.gain.setTargetAtTime(0, this.ctx.currentTime, 0.08); if (this.silent) this.silent.pause(); }
+      soundUI();
+    },
+    // 루프 다듬기: 브라우저가 걷어내지 못한 MP3·AAC 앞뒤의 짧은 무음(최대 60ms)만 잘라내고, 이음새에 3ms 미세 페이드를 건다
+    // 곡의 길이(=박자)는 건드리지 않는다
+    prep(buf) {
+      const sr = buf.sampleRate, C = buf.numberOfChannels, L = buf.length, lim = Math.floor(sr * 0.06), th = 1e-4;
+      const chs = []; for (let c = 0; c < C; c++) chs.push(buf.getChannelData(c));
+      const quiet = (n) => { for (let c = 0; c < C; c++) if (Math.abs(chs[c][n]) > th) return false; return true; };
+      let a = 0; while (a < lim && a < L - 1 && quiet(a)) a++;
+      // 앞머리에 무음이 없다면 브라우저가 이미 코덱 여백을 걷어낸 것이다. 그땐 끝의 조용한 부분도 곡의 일부(쉼표)이므로 자르지 않는다
+      let b = L - 1; if (a >= sr * 0.005) while (L - 1 - b < lim && b > a && quiet(b)) b--;
+      const len = b - a + 1, X = Math.min(Math.floor(sr * 0.003), len >> 3);
+      const out = this.ctx.createBuffer(C, len, sr);
+      for (let c = 0; c < C; c++) {
+        const d = out.getChannelData(c); d.set(chs[c].subarray(a, b + 1));
+        for (let n = 0; n < X; n++) { const f = Math.sin((n / X) * Math.PI / 2); d[n] *= f; d[len - 1 - n] *= f; }
+      }
+      out._trim = Math.round((a + (L - 1 - b)) / sr * 1000);
+      return out;
+    },
+    assign(i, buf, name, raw) {
+      const sl = this.slots[i];
+      if (sl.src) { try { sl.src.stop(); } catch (e) {} sl.src.disconnect(); }
+      sl.buf = raw ? buf : this.prep(buf); sl.name = name; sl.trim = raw ? 0 : sl.buf._trim;
+      const src = this.ctx.createBufferSource(); src.buffer = sl.buf; src.loop = true;
+      src.playbackRate.value = sl.rate; src.connect(sl.gain); src.start();
+      sl.src = src;
+      this.msg = buf.duration > 90 ? (i + 1) + '번 곡이 ' + Math.round(buf.duration) + '초로 깁니다. 짧은 루프를 권합니다' : '';
+      soundUI();
+    },
+    async decodeInto(i, arrayBuf, name) {
+      if (!this.ensure()) return;
+      try {
+        const buf = await new Promise((res, rej) => { const p = this.ctx.decodeAudioData(arrayBuf, res, rej); if (p && p.then) p.then(res, rej); });
+        this.assign(i, buf, name);
+      } catch (e) { this.msg = name + ' 을(를) 열 수 없습니다'; soundUI(); }
+    },
+    // index.html 옆의 audio 폴더에서 1–9번 곡을 찾아 채운다 (웹에 올렸을 때)
+    async autoload() {
+      if (this.triedDir || location.protocol === 'file:' || window.origin === 'null' || /claude|usercontent/.test(location.hostname)) return;
+      this.triedDir = true;
+      await Promise.all(this.slots.map(async (sl, i) => {
+        if (sl.buf) return;
+        for (const ext of ['mp3', 'm4a', 'wav', 'ogg']) {
+          try {
+            const r = await fetch(SONG_DIR + (i + 1) + '.' + ext);
+            if (!r.ok) continue;
+            await this.decodeInto(i, await r.arrayBuffer(), (i + 1) + '.' + ext); return;
+          } catch (e) {}
+        }
+      }));
+      soundUI();
+    },
+    // 시험용 루프를 빈 칸에 채운다. 빈 칸이 없으면 전부 바꾼다
+    async loadTest() {
+      if (this.testing || !this.ensure()) return;
+      this.testing = true;
+      const empty = this.slots.some(s => !s.buf), sr = this.ctx.sampleRate;
+      for (let i = 0; i < TESTLOOP.count; i++) {
+        if (empty && this.slots[i].buf) continue;
+        this.msg = '시험용 루프 만드는 중 ' + (i + 1) + '/9'; soundUI();
+        await new Promise(r => setTimeout(r, 0));                  // 한 곡씩 만들며 화면이 멈추지 않게
+        const B = TESTLOOP.build(i, sr), buf = this.ctx.createBuffer(2, B.len, sr);
+        buf.getChannelData(0).set(B.L); buf.getChannelData(1).set(B.R);
+        this.assign(i, buf, '시험 ' + (i + 1) + ' ' + TESTLOOP.NAMES[i], true);
+      }
+      this.testing = false; this.msg = ''; soundUI();
+    },
+    // 파일 이름이 1–9 또는 A–H로 시작하면 그 칸으로: "3.mp3", "C_heat.wav", "7-chrome.m4a"
+    slotFor(name) {
+      const m = name.replace(/\.[^.]+$/, '').match(/^([1-9]|[A-Ha-h])(?=[\s._\-]|$)/);
+      if (!m) return -1;
+      const c = m[1].toUpperCase();
+      return /\d/.test(c) ? +c - 1 : 'ABCDEFGH'.indexOf(c);
+    },
+    async addFiles(files, forced) {
+      if (!this.ensure()) { soundUI(); return; }
+      if (!this.on) await this.setOn(true);
+      const used = new Set();
+      for (const f of files) {
+        let i = files.length === 1 && forced >= 0 ? forced : this.slotFor(f.name);
+        if (i < 0 || used.has(i)) i = this.slots.findIndex((s, k) => !s.buf && !used.has(k));
+        if (i < 0) { this.msg = '빈 칸이 없습니다. 파일을 칸 위에 끌어다 놓으면 바꿀 수 있습니다'; continue; }
+        used.add(i);
+        await this.decodeInto(i, await f.arrayBuffer(), f.name);
+      }
+      if (this.ctx.state !== 'running') this.msg = '소리 버튼을 한 번 눌러 주세요';
+      soundUI();
+    },
+    update() {
+      if (!this.ctx || !this.on || ++this.tick % 2) return;
+      const t = this.ctx.currentTime, grid = state.grid, sel = 'ABCDEFGH'.indexOf(state.type);
+      const loaded = this.slots.filter(s => s.buf).length || 1, gG = 0.9 / Math.sqrt(loaded);
+      const target = rateForDeg(state.deg);
+      if (target < this.rate * 0.7) this.snapUntil = t + 0.2;         // 닫히는 순간: 곧바로 떨어진다
+      const snap = t < (this.snapUntil || 0);
+      this.rate = target;
+      this.slots.forEach((sl, i) => {
+        if (!sl.src) return;
+        sl.gain.gain.setTargetAtTime(grid ? gG : (i === sel ? 1 : 0), t, grid ? 0.3 : 0.25);
+        if (sl.pan) sl.pan.pan.setTargetAtTime(grid ? PAN3[i % 3] : 0, t, 0.3);
+        sl.rate = target;
+        sl.src.playbackRate.setTargetAtTime(target, t, snap ? 0.015 : 0.12);
+      });
+    },
+    tag(n) {
+      if (!this.on) return '';
+      const sl = this.slots[n];
+      return sl.buf ? '  ♪ ' + sl.rate.toFixed(2) + '×' : '  · 노래 없음';
+    }
+  };
+  if (/debug/.test(location.search)) { window.fridgeAudio = AUD; window.fridgeState = state; window.fridgeTest = TESTLOOP; }
+  function soundUI() {
+    const b = document.getElementById('sndBtn'), st = document.getElementById('sndStat');
+    if (!b) return;
+    const n = AUD.slots.filter(s => s.buf).length, sel = 'ABCDEFGH'.indexOf(state.type), sl = AUD.slots[sel];
+    b.setAttribute('aria-pressed', AUD.on); b.textContent = AUD.on ? '소리 켜짐' : '소리';
+    let t = '노래 ' + n + '/9';
+    if (AUD.on) t += ' · ' + AUD.rate.toFixed(2) + '×' + (!state.grid && sl && !sl.buf ? ' · ' + state.type + ' 노래 없음' : '');
+    if (AUD.on && !AUD.msg && n) { const lv = AUD.level(), bars = '▁▂▃▄▅▆▇█'; t += '  ' + (lv < 0.002 ? '·' : bars[Math.min(7, Math.floor(Math.sqrt(lv / 0.3) * 8))]); }
+    st.textContent = AUD.msg || t;
+    const pd = document.getElementById('pillType'); if (pd) pd.textContent = state.type + ' ' + TYPES[state.type] + (AUD.on ? ' ♪' : '');
+  }
+
+  // ── 3×3 미리보기: 타입마다 작은 타일에 그려 두고, 매 프레임 두 장씩만 갱신한다 (웹캠 필터 미리보기처럼)
+  const TILE = 'ABCDEFGH'.split('').map(t => ({ t, c: document.createElement('canvas'), x: null }));
+  TILE.forEach(q => { q.x = q.c.getContext('2d'); });
+  let tileTurn = 0;
+  function renderGrid(dt) {
+    const gapPx = 6, cw = (W - gapPx * 4) / 3, chh = (H - gapPx * 4) / 3, tdpr = Math.min(dpr, 1.1);
+    const saveT = state.type, sCv = cv, sCtx = ctx, sW = W, sH = H, sDpr = dpr, sScale = scale;
+    for (let n = 0; n < 2; n++) {                       // 한 프레임에 두 장씩 돌아가며
+      const q = TILE[(tileTurn + n) % TILE.length];
+      const pw = Math.max(64, Math.round(cw * tdpr)), phh = Math.max(48, Math.round(chh * tdpr));
+      if (q.c.width !== pw || q.c.height !== phh) { q.c.width = pw; q.c.height = phh; }
+      cv = q.c; ctx = q.x; W = cw; H = chh; dpr = tdpr; state.type = q.t;
+      layout(); renderScene(dt);
+      cv = sCv; ctx = sCtx; W = sW; H = sH; dpr = sDpr; scale = sScale; state.type = saveT;
+    }
+    tileTurn = (tileTurn + 2) % TILE.length;
+    layout();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#0a0a0b'; ctx.fillRect(0, 0, W, H);
+    ctx.font = '11px "IBM Plex Sans KR", system-ui, sans-serif'; ctx.textBaseline = 'top';
+    for (let n = 0; n < 9; n++) {
+      const gx = gapPx + (n % 3) * (cw + gapPx), gy = gapPx + Math.floor(n / 3) * (chh + gapPx);
+      ctx.save(); ctx.beginPath(); ctx.rect(gx, gy, cw, chh); ctx.clip();
+      if (n < 8) { ctx.imageSmoothingEnabled = true; ctx.drawImage(TILE[n].c, gx, gy, cw, chh); }
+      else sensorPanel(gx, gy, cw, chh);
+      ctx.restore();
+      ctx.strokeStyle = (n < 8 && TILE[n].t === saveT) ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = (n < 8 && TILE[n].t === saveT) ? 2 : 1; ctx.strokeRect(gx + 0.5, gy + 0.5, cw - 1, chh - 1);
+      const lbl = (n < 8 ? TILE[n].t + ' ' + TYPES[TILE[n].t] : '센서 · 밝기 판정') + AUD.tag(n);
+      ctx.fillStyle = 'rgba(0,0,0,0.62)'; ctx.fillRect(gx, gy + chh - 18, ctx.measureText(lbl).width + 12, 18);
+      ctx.fillStyle = '#fff'; ctx.fillText(lbl, gx + 6, gy + chh - 15);
+    }
+    ctx.textBaseline = 'alphabetic';
+  }
+  function gridHit(px, py) {
+    const gapPx = 6, cw = (W - gapPx * 4) / 3, chh = (H - gapPx * 4) / 3;
+    const ci = Math.floor((px - gapPx) / (cw + gapPx)), ri = Math.floor((py - gapPx) / (chh + gapPx));
+    if (ci < 0 || ci > 2 || ri < 0 || ri > 2) return -1;
+    return ri * 3 + ci;
+  }
+
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    requestAnimationFrame(frame);
+    if (document.hidden) return;                             // 탭이 가려져 있으면 아무것도 그리지 않는다
+    SENSOR.update(dt);
+    stepState(dt);
+    AUD.update();
+    if (AUD.on && ++sndUiTick % 6 === 0) soundUI();
+
+    // 쉬는 화면은 움직이지 않는다: 한 번 그린 뒤로는 바뀔 때까지 건너뛴다
+    const sig = state.type + state.view + inkMode + (state.grid ? 'g' : '') + Math.round(state.deg * 4) + W + 'x' + H;
+    if (sig !== lastSig) { lastSig = sig; dirty = 3; }
+    const still = live < 0.004 && offT < 0 && !state.grid && !SENSOR.on;
+    if (still && dirty <= 0) return;
+    if (still) dirty--; else dirty = 3;
+
+    const t0 = performance.now();
+    if (state.grid) renderGrid(dt); else renderScene(dt);
+    ftEMA += (performance.now() - t0 - ftEMA) * 0.12;        // 한 프레임을 그리는 데 걸린 시간
+
+    // 자동 화질: 느리면 그리는 픽셀을 줄이고, 여유가 있으면 되돌린다
+    if (qMode === 'auto' && ++qTick > 20) {
+      qTick = 0;
+      const want = ftEMA > 45 ? -3 : ftEMA > 27 ? -2 : ftEMA > 19 ? -1 : ftEMA < 8.5 ? 1 : 0;
+      if (want) {
+        const n = clamp(rsIdx + want, 0, RS.length - 1);
+        if (n !== rsIdx) { rsIdx = n; rs = RS[n]; layout(); dirty = 3; }
+      }
+    }
+  }
+  function setQuality(m) {
+    qMode = m; qTick = 0;
+    if (m === 'high') { rsIdx = RS.length - 1; rs = 1; }
+    else if (m === 'low') { rsIdx = 1; rs = RS[1]; }
+    layout(); dirty = 3;
+    const b = document.getElementById('qBtn'); if (b) b.textContent = m === 'auto' ? '화질 자동' : m === 'high' ? '화질 선명' : '화질 가볍게';
+  }
+
+  // 조작
+  const autoBtn = document.getElementById('auto');
+  function setAuto(on) {
+    state.auto = on; autoBtn.setAttribute('aria-pressed', on); autoBtn.textContent = on ? '❚❚' : '▶';
+    if (on) clock = state.deg < CLOSED ? 1.2 : 5.8 + 9 * (1 - Math.sqrt(clamp((state.deg - CLOSED) / (110 - CLOSED), 0, 1)));
+  }
+  autoBtn.addEventListener('click', () => setAuto(!state.auto));
+  degEl.addEventListener('input', () => { setAuto(false); state.deg = +degEl.value; syncSlider(); });
+
+  // 빠른 각도: 그 각도로 부드럽게 옮겨 간다 (닫힘은 실제로 닫히는 순간을 보여주려고 곧장)
+  let gotoT = null;
+  document.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => { setAuto(false); gotoT = +b.dataset.goto; }));
+
+  function press(attr, val) {
+    document.querySelectorAll('[data-' + attr + ']').forEach(b => b.setAttribute('aria-pressed', b.dataset[attr] === val));
+  }
+  const TYPES = { A: '흑백 물결', B: '잉크 선', C: '열화상', D: '성운', E: '필름', F: '픽셀 소팅', G: '액체 크롬', H: '서툰 모델링' };
+  function setType(t) {
+    state.type = t; state.mode = t === 'B' ? 'dot' : 'seq';
+    document.getElementById('viewSeg').style.display = t === 'H' ? 'none' : 'flex'; press('type', t); densKey = '';
+    document.getElementById('inkGroup').style.display = t === 'A' ? 'flex' : 'none';
+    document.getElementById('pillType').textContent = t + ' ' + TYPES[t];
+    soundUI();
+    MOTES.length = 0; layout();
+    const b = document.querySelector('[data-type="' + t + '"]'); if (b) b.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+  }
+  function setView(v) { state.view = v; press('view', v); layout(); }
+  document.querySelectorAll('[data-type]').forEach(b => b.addEventListener('click', () => setType(b.dataset.type)));
+  document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+  document.querySelectorAll('[data-ink]').forEach(b => b.addEventListener('click', () => {
+    document.documentElement.setAttribute('data-ink', b.dataset.ink); press('ink', b.dataset.ink); readTheme();
+  }));
+
+  const gridBtn = document.getElementById('gridBtn'), senBtn = document.getElementById('senBtn');
+  function setGrid(g) { state.grid = g; gridBtn.setAttribute('aria-pressed', g); document.body.classList.toggle('grid', g); layout(); soundUI(); }
+  document.getElementById('backBtn').addEventListener('click', () => setGrid(true));
+  gridBtn.addEventListener('click', () => setGrid(!state.grid));
+  const QC = ['auto', 'high', 'low'];
+  document.getElementById('qBtn').addEventListener('click', () => setQuality(QC[(QC.indexOf(qMode) + 1) % 3]));
+  const calBtn = document.getElementById('calBtn'), calOBtn = document.getElementById('calOBtn');
+  senBtn.addEventListener('click', async () => {
+    if (!SENSOR.on) { senBtn.textContent = '연결 중'; await SENSOR.start(); state.sensorDrive = SENSOR.on; }
+    else { SENSOR.stop(); state.sensorDrive = false; SENSOR.err = ''; }
+    senBtn.textContent = '센서'; senBtn.setAttribute('aria-pressed', !!state.sensorDrive);
+    calBtn.style.display = calOBtn.style.display = SENSOR.on ? 'inline-flex' : 'none';
+    if (SENSOR.err) senBtn.title = SENSOR.err;
+  });
+  calBtn.addEventListener('click', () => SENSOR.calibrate());
+  calOBtn.addEventListener('click', () => SENSOR.calibrateOpen());
+  const sndBtn = document.getElementById('sndBtn'), sndFile = document.getElementById('sndFile');
+  sndBtn.addEventListener('click', () => AUD.setOn(!AUD.on));
+  document.getElementById('sndAdd').addEventListener('click', () => sndFile.click());
+  document.getElementById('testBtn').addEventListener('click', async () => { if (!AUD.on) await AUD.setOn(true); AUD.loadTest(); });
+  sndFile.addEventListener('change', () => { const fs = [...sndFile.files]; sndFile.value = ''; if (fs.length) AUD.addFiles(fs, -1); });
+  // 파일을 끌어다 놓기: 그리드에서는 놓은 칸으로, 한 화면에서는 지금 보고 있는 칸으로
+  const dropHint = document.getElementById('dropHint'); let dragDepth = 0;
+  const hasFiles = (ev) => ev.dataTransfer && [...(ev.dataTransfer.types || [])].includes('Files');
+  addEventListener('dragenter', ev => { if (!hasFiles(ev)) return; ev.preventDefault(); dragDepth++; dropHint.hidden = false; });
+  addEventListener('dragover', ev => { if (hasFiles(ev)) ev.preventDefault(); });
+  addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; dropHint.hidden = true; } });
+  addEventListener('drop', ev => {
+    if (!hasFiles(ev)) return;
+    ev.preventDefault(); dragDepth = 0; dropHint.hidden = true;
+    const fs = [...ev.dataTransfer.files].filter(f => /^audio\//.test(f.type) || /\.(mp3|m4a|aac|wav|ogg|opus|flac)$/i.test(f.name));
+    if (!fs.length) return;
+    let forced = -1;
+    if (fs.length === 1) forced = state.grid ? gridHit(ev.clientX, ev.clientY) : 'ABCDEFGH'.indexOf(state.type);
+    AUD.addFiles(fs, forced);
+  });
+  // 브라우저는 사용자가 한 번 건드려야 소리를 낸다
+  addEventListener('pointerdown', () => { if (AUD.on && AUD.ctx && AUD.ctx.state !== 'running') { AUD.unlockIOS(); AUD.ctx.resume().then(() => { AUD.msg = ''; soundUI(); }); } }, { capture: true });
+  const panel = document.getElementById('panel'), pill = document.getElementById('pill');
+  function setFold(f) { panel.classList.toggle('folded', f); document.body.classList.toggle('folded', f); }
+  document.getElementById('fold').addEventListener('click', () => setFold(true));
+  pill.addEventListener('click', () => setFold(false));
+
+  // 화면: 좌우로 끌면 문, 두 번 탭하면 패널
+  let dragX = null, lastTap = 0, moved = 0;
+  state.sensorDrive = false;
+  mainCv.addEventListener('pointerdown', ev => { dragX = ev.clientX; moved = 0; mainCv.setPointerCapture(ev.pointerId); });
+  mainCv.addEventListener('pointermove', ev => {
+    if (dragX === null) return;
+    const dx = ev.clientX - dragX; moved += Math.abs(dx); if (moved < 4) return;
+    setAuto(false); gotoT = null;
+    state.deg = clamp(state.deg + dx / W * 150, 0, 110); dragX = ev.clientX; syncSlider();
+  });
+  const endDrag = (ev) => {
+    if (dragX !== null && moved < 6) {
+      if (state.grid) {                                   // 그리드에서 한 칸을 고르면 그 타입으로 들어간다
+        const n = gridHit(ev ? ev.clientX : 0, ev ? ev.clientY : 0);
+        if (n >= 0 && n < 8) { setType(TILE[n].t); setGrid(false); }
+        else if (n === 8) senBtn.click();
+        dragX = null; return;
+      }
+      const now = performance.now(); if (now - lastTap < 320) { setFold(!panel.classList.contains('folded')); lastTap = 0; } else lastTap = now;
+    }
+    dragX = null;
+  };
+  mainCv.addEventListener('pointerup', endDrag); mainCv.addEventListener('pointercancel', () => { dragX = null; });
+
+  addEventListener('keydown', ev => {
+    if (ev.target.tagName === 'INPUT' && (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight')) return;
+    const k = ev.key;
+    if (k === ' ') { ev.preventDefault(); setAuto(!state.auto); }
+    else if (k === 'ArrowLeft' || k === 'ArrowRight') { setAuto(false); gotoT = null; state.deg = clamp(state.deg + (k === 'ArrowRight' ? 1 : -1) * (ev.shiftKey ? 10 : 2), 0, 110); syncSlider(); }
+    else if (k >= '1' && k <= '8') setType('ABCDEFGH'[+k - 1]);
+    else if (k === 'v' || k === 'V') setView(state.view === 'fridge' ? 'abstract' : 'fridge');
+    else if (k === 'g' || k === 'G') setGrid(!state.grid);
+    else if (k === 'Escape' && !state.grid) setGrid(true);
+    else if (k === 'q' || k === 'Q') setQuality(QC[(QC.indexOf(qMode) + 1) % 3]);
+    else if (k === 'm' || k === 'M') AUD.setOn(!AUD.on);
+    else if (k === 'h' || k === 'H') setFold(!panel.classList.contains('folded'));
+    else if (k === '0') { setAuto(false); gotoT = 0; }
+  });
+
+  addEventListener('resize', () => { layout(); dirty = 3; });
+  addEventListener('visibilitychange', () => { dirty = 3; last = performance.now(); });
+  document.documentElement.setAttribute('data-ink', 'black');
+  if ((navigator.hardwareConcurrency || 4) <= 4 || innerWidth * innerHeight > 1100000) { rsIdx = 3; rs = RS[3]; }
+  readTheme(); layout(); syncSlider();
+  setAuto(state.auto);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
